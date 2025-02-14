@@ -24,18 +24,32 @@ export async function GET(
         );
     }
 }
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
         await connectToDatabase();
         const body = await request.json();
 
-        const menuItem = await MenuItem.findByIdAndUpdate(params.id, body, {
-            new: true,
-            runValidators: true,
-        });
+        const menuItemData = {
+            nameMK: body.nameMK,
+            nameEN: body.nameEN,
+            descriptionMK: body.descriptionMK || '',
+            descriptionEN: body.descriptionEN || '',
+            price: Number(body.price),
+            category: body.category,
+            isAvailable: body.isAvailable ?? true,
+            ingredients: body.ingredients?.filter(Boolean) || [],
+            allergens: body.allergens?.filter(Boolean) || [],
+            spicyLevel: Number(body.spicyLevel) || 0,
+            isVegetarian: body.isVegetarian || false,
+            isVegan: body.isVegan || false,
+            order: body.order || 0
+        };
+
+        const menuItem = await MenuItem.findByIdAndUpdate(
+            params.id,
+            menuItemData,
+            { new: true, runValidators: true }
+        );
 
         if (!menuItem) {
             return NextResponse.json(
@@ -46,6 +60,7 @@ export async function PUT(
 
         return NextResponse.json(menuItem);
     } catch (error) {
+        console.error('Error updating menu item:', error);
         return NextResponse.json(
             { error: 'Failed to update menu item' },
             { status: 500 }
