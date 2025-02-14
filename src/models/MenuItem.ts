@@ -54,6 +54,14 @@ const MenuItemSchema = new mongoose.Schema({
     order: {
         type: Number,
         default: 0,
+    },
+    imageUrl: {
+        type: String,
+        default: '',
+    },
+    imagePublicId: {
+        type: String,
+        default: '',
     }
 }, {
     timestamps: true,

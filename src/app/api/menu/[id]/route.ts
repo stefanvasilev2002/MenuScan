@@ -1,6 +1,7 @@
 import { connectToDatabase } from '@/lib/db';
 import { MenuItem } from '@/models/MenuItem';
 import { NextResponse } from 'next/server';
+
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
@@ -24,6 +25,7 @@ export async function GET(
         );
     }
 }
+
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
         await connectToDatabase();
@@ -42,7 +44,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             spicyLevel: Number(body.spicyLevel) || 0,
             isVegetarian: body.isVegetarian || false,
             isVegan: body.isVegan || false,
-            order: body.order || 0
+            order: body.order || 0,
+            imageUrl: body.imageUrl || '',
+            imagePublicId: body.imagePublicId || ''
         };
 
         const menuItem = await MenuItem.findByIdAndUpdate(
@@ -74,7 +78,9 @@ export async function DELETE(
 ) {
     try {
         await connectToDatabase();
-        const menuItem = await MenuItem.findByIdAndDelete(params.id);
+
+        // First find the item to get the image public ID
+        const menuItem = await MenuItem.findById(params.id);
 
         if (!menuItem) {
             return NextResponse.json(
@@ -83,8 +89,24 @@ export async function DELETE(
             );
         }
 
+        // If there's an image, attempt to delete it from Cloudinary
+        if (menuItem.imagePublicId) {
+            try {
+                await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/upload/${menuItem.imagePublicId}`, {
+                    method: 'DELETE',
+                });
+            } catch (error) {
+                console.error('Error deleting image:', error);
+                // Continue with menu item deletion even if image deletion fails
+            }
+        }
+
+        // Now delete the menu item
+        await MenuItem.findByIdAndDelete(params.id);
+
         return NextResponse.json({ message: 'Menu item deleted' });
     } catch (error) {
+        console.error('Error deleting menu item:', error);
         return NextResponse.json(
             { error: 'Failed to delete menu item' },
             { status: 500 }

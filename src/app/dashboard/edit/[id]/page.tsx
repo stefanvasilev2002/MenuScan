@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ImageUpload from "@/components/image/ImageUpload";
 
 interface Category {
     _id: string;
@@ -25,6 +26,8 @@ interface MenuItem {
     isVegetarian: boolean;
     isVegan: boolean;
     order: number;
+    imageUrl?: string;
+    imagePublicId?: string;
 }
 
 export default function EditItemPage({ params }: { params: { id: string } }) {
@@ -43,7 +46,9 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
         spicyLevel: 0,
         isVegetarian: false,
         isVegan: false,
-        order: 0
+        order: 0,
+        imageUrl: '',
+        imagePublicId: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -62,7 +67,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                 }
 
                 const categoriesData = await categoriesRes.json();
-                const menuItemData = await menuItemRes.json();
+                const menuItemData: MenuItem = await menuItemRes.json();
 
                 setCategories(categoriesData);
                 setFormData({
@@ -78,7 +83,9 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                     spicyLevel: menuItemData.spicyLevel || 0,
                     isVegetarian: menuItemData.isVegetarian || false,
                     isVegan: menuItemData.isVegan || false,
-                    order: menuItemData.order || 0
+                    order: menuItemData.order || 0,
+                    imageUrl: menuItemData.imageUrl || '',
+                    imagePublicId: menuItemData.imagePublicId || ''
                 });
             } catch (error) {
                 setError('Failed to load data');
@@ -187,6 +194,21 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                             required
                         />
                     </div>
+                </div>
+
+                {/* Image Upload Section */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Слика на продуктот
+                    </label>
+                    <ImageUpload
+                        currentImageUrl={formData.imageUrl}
+                        currentImagePublicId={formData.imagePublicId}
+                        onImageUpload={(url, publicId) =>
+                            setFormData(prev => ({ ...prev, imageUrl: url, imagePublicId: publicId }))
+                        }
+                        onError={setError}
+                    />
                 </div>
 
                 {/* Descriptions */}
@@ -372,15 +394,12 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                         Достапно
                     </label>
                 </div>
-
                 {/* Submit Buttons */}
                 <div className="flex space-x-4 pt-4">
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`flex-1 ${
-                            loading ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'
-                        } text-white py-2 px-4 rounded-lg`}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white py-2 px-4 rounded-lg disabled:cursor-not-allowed"
                     >
                         {loading ? 'Се зачувува...' : 'Зачувај Промени'}
                     </button>
@@ -402,6 +421,15 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                         if (confirm('Дали сте сигурни дека сакате да го избришете овој продукт?')) {
                             try {
                                 setLoading(true);
+
+                                // Delete image from Cloudinary if exists
+                                if (formData.imagePublicId) {
+                                    await fetch(`/api/upload/${formData.imagePublicId}`, {
+                                        method: 'DELETE',
+                                    });
+                                }
+
+                                // Delete menu item
                                 const response = await fetch(`/api/menu/${params.id}`, {
                                     method: 'DELETE',
                                 });
@@ -419,9 +447,10 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                             }
                         }
                     }}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg"
+                    disabled={loading}
+                    className="w-full bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white py-2 px-4 rounded-lg disabled:cursor-not-allowed"
                 >
-                    Избриши Продукт
+                    {loading ? 'Се брише...' : 'Избриши Продукт'}
                 </button>
             </div>
         </div>

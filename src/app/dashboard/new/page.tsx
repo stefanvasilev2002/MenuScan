@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ImageUpload from "@/components/image/ImageUpload";
 
 interface Category {
     _id: string;
@@ -12,6 +13,10 @@ interface Category {
 export default function NewItemPage() {
     const router = useRouter();
     const [categories, setCategories] = useState<Category[]>([]);
+    const [imageData, setImageData] = useState({
+        url: '',
+        publicId: ''
+    });
     const [formData, setFormData] = useState({
         nameMK: '',
         nameEN: '',
@@ -71,7 +76,9 @@ export default function NewItemPage() {
                 price: Number(formData.price),
                 ingredients: formData.ingredients.filter(i => i.trim() !== ''),
                 allergens: formData.allergens.filter(a => a.trim() !== ''),
-                spicyLevel: Number(formData.spicyLevel)
+                spicyLevel: Number(formData.spicyLevel),
+                imageUrl: imageData.url,
+                imagePublicId: imageData.publicId
             };
 
             const response = await fetch('/api/menu', {
@@ -112,7 +119,7 @@ export default function NewItemPage() {
                         <input
                             type="text"
                             value={formData.nameMK}
-                            onChange={(e) => setFormData({ ...formData, nameMK: e.target.value })}
+                            onChange={(e) => setFormData({...formData, nameMK: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             required
                         />
@@ -125,7 +132,7 @@ export default function NewItemPage() {
                         <input
                             type="text"
                             value={formData.nameEN}
-                            onChange={(e) => setFormData({ ...formData, nameEN: e.target.value })}
+                            onChange={(e) => setFormData({...formData, nameEN: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             required
                         />
@@ -140,7 +147,7 @@ export default function NewItemPage() {
                         </label>
                         <textarea
                             value={formData.descriptionMK}
-                            onChange={(e) => setFormData({ ...formData, descriptionMK: e.target.value })}
+                            onChange={(e) => setFormData({...formData, descriptionMK: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             rows={3}
                         />
@@ -152,7 +159,7 @@ export default function NewItemPage() {
                         </label>
                         <textarea
                             value={formData.descriptionEN}
-                            onChange={(e) => setFormData({ ...formData, descriptionEN: e.target.value })}
+                            onChange={(e) => setFormData({...formData, descriptionEN: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             rows={3}
                         />
@@ -168,7 +175,7 @@ export default function NewItemPage() {
                         <input
                             type="number"
                             value={formData.price}
-                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            onChange={(e) => setFormData({...formData, price: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             min="0"
                             step="1"
@@ -182,7 +189,7 @@ export default function NewItemPage() {
                         </label>
                         <select
                             value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            onChange={(e) => setFormData({...formData, category: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             required
                         >
@@ -205,7 +212,7 @@ export default function NewItemPage() {
                             <input
                                 type="checkbox"
                                 checked={formData.isVegetarian}
-                                onChange={(e) => setFormData({ ...formData, isVegetarian: e.target.checked })}
+                                onChange={(e) => setFormData({...formData, isVegetarian: e.target.checked})}
                                 className="rounded"
                             />
                             Вегетаријанско
@@ -215,7 +222,7 @@ export default function NewItemPage() {
                             <input
                                 type="checkbox"
                                 checked={formData.isVegan}
-                                onChange={(e) => setFormData({ ...formData, isVegan: e.target.checked })}
+                                onChange={(e) => setFormData({...formData, isVegan: e.target.checked})}
                                 className="rounded"
                             />
                             Веганско
@@ -227,7 +234,7 @@ export default function NewItemPage() {
                             </label>
                             <select
                                 value={formData.spicyLevel}
-                                onChange={(e) => setFormData({ ...formData, spicyLevel: Number(e.target.value) })}
+                                onChange={(e) => setFormData({...formData, spicyLevel: Number(e.target.value)})}
                                 className="p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                                 <option value="0">Не е луто</option>
@@ -309,13 +316,24 @@ export default function NewItemPage() {
                         <input
                             type="checkbox"
                             checked={formData.isAvailable}
-                            onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
+                            onChange={(e) => setFormData({...formData, isAvailable: e.target.checked})}
                             className="rounded"
                         />
                         Достапно
                     </label>
                 </div>
-
+                {/* Image Upload */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Слика
+                    </label>
+                    <ImageUpload
+                        currentImageUrl={imageData.url}
+                        currentImagePublicId={imageData.publicId}
+                        onImageUpload={(url, publicId) => setImageData({ url, publicId })}
+                        onError={(error) => setError(error)}
+                    />
+                </div>
                 {/* Submit Buttons */}
                 <div className="flex space-x-4 pt-4">
                     <button
