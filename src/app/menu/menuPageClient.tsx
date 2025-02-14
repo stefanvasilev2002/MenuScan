@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { PriceDisplay } from '@/components/currency/PriceDisplay';
+import {Currency} from "@/types/types";
+import {CurrencySwitcher} from "@/components/currency/CurrencySwitcher";
 
 interface Category {
     _id: string;
@@ -76,11 +79,13 @@ function CategorySection({
                              category,
                              items,
                              lang,
+                             currency,
                              level = 0
                          }: {
     category: Category;
     items: MenuItem[];
     lang: 'mk' | 'en';
+    currency: Currency;
     level?: number;
 }) {
     const categoryItems = items.filter(item => item.category === category.slug);
@@ -104,7 +109,11 @@ function CategorySection({
             {hasItems && (
                 <div className="grid md:grid-cols-2 gap-8">
                     {categoryItems.map((item) => (
-                        <MenuItemCard key={item._id} item={item} lang={lang} />
+                        <MenuItemCard key={item._id}
+                                      item={item}
+                                      lang={lang}
+                                      currency={currency}
+                                      showOtherCurrencies={true} />
                     ))}
                 </div>
             )}
@@ -117,6 +126,7 @@ function CategorySection({
                     items={items}
                     lang={lang}
                     level={level + 1}
+                    currency={currency}
                 />
             ))}
         </div>
@@ -163,7 +173,17 @@ function DietaryIcon({ type, size = "normal", level = 1 }: { type: 'vegetarian' 
     }
 }
 
-function MenuItemCard({ item, lang }: { item: MenuItem, lang: 'mk' | 'en' }) {
+function MenuItemCard({
+                          item,
+                          lang,
+                          currency,
+                          showOtherCurrencies
+                      }: {
+    item: MenuItem;
+    lang: 'mk' | 'en';
+    currency: Currency;
+    showOtherCurrencies?: boolean;
+}) {
     return (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-gray-100">
             {item.imageUrl && (
@@ -220,9 +240,11 @@ function MenuItemCard({ item, lang }: { item: MenuItem, lang: 'mk' | 'en' }) {
                         </div>
                     </div>
 
-                    <div className="text-lg font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                        {item.price} ден.
-                    </div>
+                    <PriceDisplay
+                        amount={item.price}
+                        currency={currency}
+                        showOtherCurrencies={showOtherCurrencies}
+                    />
                 </div>
             </div>
         </div>
@@ -231,6 +253,8 @@ function MenuItemCard({ item, lang }: { item: MenuItem, lang: 'mk' | 'en' }) {
 
 export default function MenuPageClient({ initialMenuItems, categories }: MenuPageProps) {
     const [lang, setLang] = useState<'mk' | 'en'>('mk');
+    const [currency, setCurrency] = useState<Currency>('MKD');
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({
@@ -279,6 +303,12 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
                                     'Explore our delicious dishes'
                                 )}
                             </p>
+                        </div>
+                        <div className="flex gap-4">
+                            <CurrencySwitcher
+                                currentCurrency={currency}
+                                onCurrencyChange={setCurrency}
+                            />
                         </div>
                     </div>
                 </div>
@@ -394,7 +424,6 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
                 </div>
 
                 {/* Categories and Menu Items */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="space-y-16 pb-16">
                         {categoryTree.map((category) => (
                             <CategorySection
@@ -402,6 +431,7 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
                                 category={category}
                                 items={filteredItems}
                                 lang={lang}
+                                currency={currency}
                             />
                         ))}
                     </div>
@@ -419,6 +449,5 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
                     )}
                 </div>
             </div>
-        </div>
     );
 }
