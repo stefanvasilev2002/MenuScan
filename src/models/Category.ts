@@ -1,37 +1,28 @@
-import mongoose, { Schema } from 'mongoose';
-
-interface ICategory {
-    nameMK: string;
-    nameEN: string;
-    slug: string;
-    order: number;
-    parentId?: string;
-    icon?: string;
-    color?: string;
-    isVisible: boolean;
-    children?: ICategory[];
-}
-
-const CategorySchema = new Schema<ICategory>({
+import mongoose from 'mongoose';
+const CategorySchema = new mongoose.Schema({
+    menuId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Menu',
+        required: true,
+    },
     nameMK: {
         type: String,
-        required: [true, 'NameMK is required'],
+        required: true,
     },
     nameEN: {
         type: String,
-        required: [true, 'NameEN is required'],
+        required: true,
     },
     slug: {
         type: String,
-        required: [true, 'Slug is required'],
-        unique: true,
+        required: true,
     },
     order: {
         type: Number,
         default: 0,
     },
     parentId: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         default: null,
     },
@@ -41,23 +32,24 @@ const CategorySchema = new Schema<ICategory>({
     },
     color: {
         type: String,
-        default: '#3B82F6', // Default blue color
+        default: '#3B82F6',
     },
     isVisible: {
         type: Boolean,
         default: true,
-    }
+    },
 }, {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    strictPopulate: false,
 });
 
-// Virtual field for children
 CategorySchema.virtual('children', {
     ref: 'Category',
     localField: '_id',
-    foreignField: 'parentId'
+    foreignField: 'parentId',
 });
 
-export const Category = mongoose.models.Category as mongoose.Model<ICategory> || mongoose.model<ICategory>('Category', CategorySchema);
+CategorySchema.set('toJSON', { virtuals: true });
+CategorySchema.set('toObject', { virtuals: true });
+
+export const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);

@@ -6,7 +6,7 @@ import { jwtVerify } from 'jose';
 // Routes that require authentication
 const PROTECTED_ROUTES = ['/dashboard'];
 // Routes that are public (including the landing page)
-const PUBLIC_ROUTES = ['/login', '/register', '/'];
+const PUBLIC_ROUTES = ['/login', '/register', '/', '/menu'];
 // Special routes that don't need ownership verification
 const SPECIAL_ROUTES = ['/dashboard/menu/new'];
 

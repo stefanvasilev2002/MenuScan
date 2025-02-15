@@ -39,15 +39,16 @@ export default function NewItemPage() {
 
     useEffect(() => {
         fetchCategories();
-    }, []);
+    }, [menuId]);
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('/api/categories');
+            const response = await fetch(`/api/categories?menuId=${menuId}`);
             if (!response.ok) throw new Error('Failed to fetch categories');
             const data = await response.json();
             setCategories(data);
         } catch (error) {
+            console.error('Error fetching categories:', error);
             setError('Failed to load categories');
         }
     };

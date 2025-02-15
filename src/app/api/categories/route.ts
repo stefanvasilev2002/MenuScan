@@ -1,7 +1,8 @@
+//api/categories/route.ts
 import { connectToDatabase } from '@/lib/db';
 import { Category } from '@/models/Category';
 import { NextResponse } from 'next/server';
-
+import mongoose from 'mongoose';
 function slugify(text: string): string {
     const cyrillicToLatin: { [key: string]: string } = {
         'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
@@ -33,69 +34,78 @@ function slugify(text: string): string {
         .replace(/-+$/, '');
 }
 
+export async function GET(request: Request) {
+    try {
+        await connectToDatabase();
+        const { searchParams } = new URL(request.url);
+        const menuId = searchParams.get('menuId');
+
+        if (!menuId) {
+            return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+        }
+
+        // Fetch all categories for the menu
+        const allCategories = await Category.find({ menuId }).sort({ order: 1 });
+
+        // Build the hierarchy
+        const categoryMap = new Map();
+        allCategories.forEach(category => {
+            categoryMap.set(category._id.toString(), {
+                ...category.toObject(),
+                children: []
+            });
+        });
+
+        const rootCategories = [];
+        allCategories.forEach(category => {
+            const categoryObj = categoryMap.get(category._id.toString());
+            if (category.parentId) {
+                const parent = categoryMap.get(category.parentId.toString());
+                if (parent) {
+                    parent.children.push(categoryObj);
+                }
+            } else {
+                rootCategories.push(categoryObj);
+            }
+        });
+
+        return NextResponse.json(rootCategories);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
+    }
+}
+
 export async function POST(request: Request) {
     try {
         await connectToDatabase();
         const body = await request.json();
+        console.log('Received body:', body);
 
-        // Generate slug from Macedonian name
-        const slug = slugify(body.nameMK);
+        if (!body.menuId) {
+            return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+        }
 
         const categoryData = {
+            menuId: new mongoose.Types.ObjectId(body.menuId),
             nameMK: body.nameMK,
             nameEN: body.nameEN,
-            slug: slug,
+            slug: slugify(body.nameMK),
             order: body.order || 0,
-            parentId: body.parentId || null,
+            parentId: body.parentId ? new mongoose.Types.ObjectId(body.parentId) : null,
             icon: body.icon || null,
             color: body.color || '#3B82F6',
-            isVisible: body.isVisible ?? true
+            isVisible: body.isVisible ?? true,
         };
-
-        // Check if parent exists if parentId is provided
-        if (categoryData.parentId) {
-            const parentExists = await Category.findById(categoryData.parentId);
-            if (!parentExists) {
-                return NextResponse.json(
-                    { error: 'Parent category not found' },
-                    { status: 400 }
-                );
-            }
-        }
 
         console.log('Creating category with data:', categoryData);
 
         const category = await Category.create(categoryData);
+        console.log('Raw created document:', category.toObject()); // Log raw document
+
         return NextResponse.json(category, { status: 201 });
     } catch (error) {
         console.error('Error creating category:', error);
-        return NextResponse.json(
-            {
-                error: 'Failed to create category',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
-    }
-}
-
-export async function GET() {
-    try {
-        await connectToDatabase();
-        // Populate children virtual field and sort by order
-        const categories = await Category.find({})
-            .populate({
-                path: 'children',
-                options: { sort: { order: 1 } }
-            })
-            .sort({ order: 1 });
-
-        return NextResponse.json(categories);
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch categories' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
     }
 }

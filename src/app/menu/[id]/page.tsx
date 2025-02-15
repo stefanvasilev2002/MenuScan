@@ -1,5 +1,5 @@
-import MenuPageClient from "@/app/menu/menuPageClient";
 import { notFound } from 'next/navigation';
+import MenuPageClient from "@/app/menu/menuPageClient";
 
 interface Props {
     params: {
@@ -24,8 +24,8 @@ async function getMenuItems(menuId: string) {
     return res.json();
 }
 
-async function getCategories() {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories`, {
+async function getCategories(menuId: string) {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories?menuId=${menuId}`, {
         cache: 'no-store',
         headers: {
             'Accept': 'application/json',
@@ -55,12 +55,15 @@ async function getMenu(menuId: string) {
 }
 
 export default async function MenuPage({ params }: Props) {
-    const { id: menuId } = params;
+    // Await params before accessing its properties
+    const { id: menuId } = await params;
+
+    console.log('Rendering menu page for ID:', menuId);
 
     try {
         const [menuItems, categories, menu] = await Promise.all([
             getMenuItems(menuId),
-            getCategories(),
+            getCategories(menuId),
             getMenu(menuId),
         ]);
 
@@ -72,6 +75,7 @@ export default async function MenuPage({ params }: Props) {
             />
         );
     } catch (error) {
+        console.error('Error fetching data:', error);
         notFound();
     }
 }

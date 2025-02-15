@@ -8,11 +8,14 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const id = params.id;
+        const { id } = await params;
         await connectToDatabase();
 
         const menu = await Menu.findById(id);
+        console.log('Menu:', menu);
+        console.log('Menu ID:', id);
         if (!menu) {
+            console.error('Menu not found:', id);
             return NextResponse.json({ error: 'Menu not found' }, { status: 404 });
         }
 

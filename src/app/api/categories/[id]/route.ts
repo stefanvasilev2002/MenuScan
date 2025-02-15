@@ -1,3 +1,4 @@
+//api/categories/[id]/route.ts
 import { connectToDatabase } from '@/lib/db';
 import { Category } from '@/models/Category';
 import { NextResponse } from 'next/server';
@@ -117,11 +118,12 @@ export async function PUT(
             isVisible: body.isVisible ?? true
         };
 
+        // Update the category
         const category = await Category.findByIdAndUpdate(
             params.id,
             categoryData,
             { new: true, runValidators: true }
-        ).populate('children');
+        );
 
         if (!category) {
             return NextResponse.json(
@@ -130,7 +132,10 @@ export async function PUT(
             );
         }
 
-        return NextResponse.json(category);
+        // Manually populate the virtual children field
+        const populatedCategory = await Category.findById(category._id).populate('children');
+
+        return NextResponse.json(populatedCategory);
     } catch (error) {
         console.error('Error updating category:', error);
         return NextResponse.json(

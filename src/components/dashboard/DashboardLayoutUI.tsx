@@ -33,8 +33,10 @@ export default function DashboardLayoutUI({ menuId, children }) {
                         <span className="mr-2">📋</span>
                         Мени
                     </Link>
-                    <Link href="/dashboard/categories"
-                          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
+                    <Link
+                        href={menuId ? `/dashboard/categories?menuId=${menuId}` : '/dashboard'}
+                        className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg"
+                    >
                         <span className="mr-2">📑</span>
                         Категории
                     </Link>

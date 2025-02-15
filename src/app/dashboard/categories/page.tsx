@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import {Eye, EyeOff, ChevronDown, ChevronRight, GripVertical, Plus} from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface Category {
     _id: string;
@@ -152,6 +153,9 @@ const NestedDraggable = ({
 };
 
 export default function CategoriesPage() {
+    const searchParams = useSearchParams();
+    const menuId = searchParams.get('menuId');
+
     const [categories, setCategories] = useState<Category[]>([]);
     const [newCategory, setNewCategory] = useState({
         nameMK: '',
@@ -159,7 +163,8 @@ export default function CategoriesPage() {
         parentId: '',
         icon: '',
         color: '#3B82F6',
-        isVisible: true
+        isVisible: true,
+        menuId: menuId
     });
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [error, setError] = useState('');
@@ -167,15 +172,28 @@ export default function CategoriesPage() {
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        fetchCategories();
-    }, []);
+        if (menuId) {
+            fetchCategories();
+            setNewCategory(prev => ({ ...prev, menuId }));
+        }
+    }, [menuId]);
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('/api/categories');
+            console.log('Fetching categories for menuId:', menuId);
+            const url = `/api/categories?menuId=${menuId}`;
+            console.log('Fetch URL:', url);
+
+            const response = await fetch(url);
+            console.log('Response status:', response.status);
+
             const data = await response.json();
+            console.log('Raw response data:', data);
+
             if (response.ok) {
                 setCategories(data);
+            } else {
+                console.error('Error response:', data);
             }
         } catch (error) {
             console.error('Error fetching categories:', error);
@@ -197,7 +215,11 @@ export default function CategoriesPage() {
             const response = await fetch(`/api/categories/${category._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...category, isVisible: !category.isVisible }),
+                body: JSON.stringify({
+                    ...category,
+                    menuId,
+                    isVisible: !category.isVisible
+                }),
             });
 
             if (response.ok) {
@@ -260,7 +282,10 @@ export default function CategoriesPage() {
                 fetch(`/api/categories/${item._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
+                    body: JSON.stringify({
+                        ...item,
+                        menuId // Add menuId
+                    })
                 })
             ));
         } catch (error) {
@@ -327,6 +352,7 @@ export default function CategoriesPage() {
         </Draggable>
     );
 
+    // In the CategoriesPage component, update the handleSubmit function:
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -338,19 +364,35 @@ export default function CategoriesPage() {
             : '/api/categories';
 
         try {
+            console.log('Submitting:', isEditing ? editingCategory : newCategory);
+            console.log('URL:', url);
+            console.log('Menu ID:', menuId);
             const response = await fetch(url, {
                 method: isEditing ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(isEditing ? editingCategory : newCategory),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(isEditing ? {
+                    ...editingCategory,
+                    menuId
+                } : {
+                    ...newCategory,
+                    menuId
+                }),
             });
 
             if (response.ok) {
                 if (isEditing) {
                     setEditingCategory(null);
                 } else {
-                    setNewCategory({ nameMK: '', nameEN: '' });
+                    // Reset form while maintaining menuId
+                    setNewCategory({
+                        nameMK: '',
+                        nameEN: '',
+                        parentId: '',
+                        icon: '',
+                        color: '#3B82F6',
+                        isVisible: true,
+                        menuId: menuId
+                    });
                 }
                 fetchCategories();
             } else {
@@ -532,7 +574,8 @@ export default function CategoriesPage() {
             <div className="bg-white rounded-lg shadow-sm">
                 <div className="p-6">
                     <DragDropContext onDragEnd={handleDragEnd}>
-                        <Droppable droppableId="categories" type="level-0">
+                        <Droppable droppableId="categories" type="level-0" isDropDisabled={false}
+                        >
                             {(provided) => (
                                 <div {...provided.droppableProps} ref={provided.innerRef}>
                                     {categories.map((category, index) => (
