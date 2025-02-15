@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import ImageUpload from "@/components/image/ImageUpload";
 
 interface Category {
@@ -12,6 +12,8 @@ interface Category {
 
 export default function NewItemPage() {
     const router = useRouter();
+    const params = useParams();
+    const menuId = params.id;
     const [categories, setCategories] = useState<Category[]>([]);
     const [imageData, setImageData] = useState({
         url: '',
@@ -73,6 +75,7 @@ export default function NewItemPage() {
         try {
             const cleanedData = {
                 ...formData,
+                menuId, // Include the menuId in the request
                 price: Number(formData.price),
                 ingredients: formData.ingredients.filter(i => i.trim() !== ''),
                 allergens: formData.allergens.filter(a => a.trim() !== ''),
@@ -92,7 +95,8 @@ export default function NewItemPage() {
                 throw new Error(data.error || 'Failed to create menu item');
             }
 
-            router.push('/dashboard');
+            // Redirect back to the menu items page for this specific menu
+            router.push(`/dashboard/menu/${menuId}/items`);
             router.refresh();
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to create menu item');
@@ -334,6 +338,7 @@ export default function NewItemPage() {
                         onError={(error) => setError(error)}
                     />
                 </div>
+
                 {/* Submit Buttons */}
                 <div className="flex space-x-4 pt-4">
                     <button
@@ -347,7 +352,7 @@ export default function NewItemPage() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => router.push('/dashboard')}
+                        onClick={() => router.push(`/dashboard/menu/${menuId}/items`)}
                         className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg"
                     >
                         Откажи

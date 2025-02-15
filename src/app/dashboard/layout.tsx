@@ -1,11 +1,35 @@
+// app/dashboard/layout.tsx
 import React from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { getCurrentUser } from '@/lib/auth';
+import { connectToDatabase } from '@/lib/db';
+import { Menu } from '@/models/Menu';
 
-export default function DashboardLayout({
-                                            children,
-                                        }: {
+async function getMenu(userId: string) {
+    await connectToDatabase();
+    return await Menu.findOne({ userId });
+}
+
+export default async function DashboardLayout({
+                                                  children,
+                                              }: {
     children: React.ReactNode
 }) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth_token')?.value;
+    let menuId = '';
+
+    if (token) {
+        const user = await getCurrentUser(token);
+        if (user) {
+            const menu = await getMenu(user._id);
+            if (menu) {
+                menuId = menu._id.toString();
+            }
+        }
+    }
+
     return (
         <div className="min-h-screen flex">
             {/* Sidebar */}
@@ -25,8 +49,9 @@ export default function DashboardLayout({
                         <span className="mr-2">📑</span>
                         Категории
                     </Link>
-                    <Link href="/dashboard/qr"
-                          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
+                    <Link
+                        href={menuId ? `/dashboard/menu/${menuId}/qr` : '/dashboard'}
+                        className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
                         <span className="mr-2">📱</span>
                         QR Код
                     </Link>

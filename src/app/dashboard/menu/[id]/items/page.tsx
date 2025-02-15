@@ -1,3 +1,4 @@
+// app/dashboard/menu/[id]/items/page.tsx
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { MenuDashboard } from '@/components/dashboard/MenuDashboard';
@@ -5,8 +6,12 @@ import { getCurrentUser } from '@/lib/auth';
 import { Menu } from '@/models/Menu';
 import { connectToDatabase } from '@/lib/db';
 
-export default async function DashboardPage() {
-    const cookieStore = await cookies();
+export default async function MenuItemsPage({
+                                                params
+                                            }: {
+    params: { id: string }
+}) {
+    const cookieStore = cookies();
     const token = cookieStore.get('auth_token')?.value;
 
     if (!token) {
@@ -18,19 +23,22 @@ export default async function DashboardPage() {
         redirect('/login');
     }
 
-    // Connect to database and fetch user's primary menu
+    // Connect to database and fetch menu
     await connectToDatabase();
-    const userMenu = await Menu.findOne({ userId: user._id });
+    const menu = await Menu.findById(params.id);
 
-    if (!userMenu) {
-        // If user has no menu, redirect to menu creation page
-        console.log('User has no menu, redirecting to menu creation page');
-        redirect('/dashboard/menu/new');
+    if (!menu) {
+        redirect('/dashboard');
+    }
+
+    // Verify ownership
+    if (menu.userId.toString() !== user._id.toString()) {
+        redirect('/dashboard');
     }
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <MenuDashboard initialMenuId={userMenu._id.toString()} userId={user._id.toString()} />
+            <MenuDashboard initialMenuId={params.id} userId={user._id.toString()} />
         </div>
     );
 }

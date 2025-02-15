@@ -1,40 +1,58 @@
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 import { User } from '@/models/User';
 import { connectToDatabase } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-console.log('JWT_SECRET:', JWT_SECRET);
-export interface DecodedToken {
-    userId: string;
-    email: string;
-    iat: number;
-    exp: number;
-}
-
-export async function getCurrentUser(token: string | undefined) {
-    if (!token) return null;
-
+export async function getCurrentUser(token: string) {
     try {
-        // Verify the token
-        const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not defined');
+        }
 
-        // Connect to the database
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+
+        if (!payload.userId) {
+            return null;
+        }
+
         await connectToDatabase();
+        const user = await User.findById(payload.userId).select('-password');
 
-        // Find the user but exclude the password
-        const user = await User.findById(decoded.userId).select('-password');
         if (!user || !user.isActive) {
             return null;
         }
 
-        return {
-            id: user._id,
-            email: user.email,
-            businessName: user.businessName,
-            plan: user.plan
-        };
+        return user;
     } catch (error) {
-        console.error('Auth error:', error);
+        console.error('Error getting current user:', error);
+        return null;
+    }
+}
+
+export async function generateToken(userId: string) {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is not defined');
+    }
+
+    const jwt = require('jsonwebtoken');
+    return jwt.sign(
+        { userId },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+}
+
+export async function verifyToken(token: string) {
+    try {
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not defined');
+        }
+
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        return payload;
+    } catch (error) {
+        console.error('Error verifying token:', error);
         return null;
     }
 }

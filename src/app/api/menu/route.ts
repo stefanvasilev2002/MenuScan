@@ -1,6 +1,9 @@
+// app/api/menu/route.ts
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { MenuItem } from '@/models/MenuItem';
+import { cookies } from 'next/headers';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
     try {
@@ -9,7 +12,30 @@ export async function POST(request: Request) {
 
         console.log('Received body:', body); // Debug log
 
+        // Get authentication token and verify user
+        const cookieStore = await cookies();
+        const token = cookieStore.get('auth_token')?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        }
+
+        const user = await getCurrentUser(token);
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 401 });
+        }
+
+        // Validate required fields
+        if (!body.menuId) {
+            return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+        }
+
+        if (!body.nameMK || !body.nameEN || !body.price) {
+            return NextResponse.json({ error: 'Name and price are required' }, { status: 400 });
+        }
+
         const menuItemData = {
+            menuId: body.menuId,
             nameMK: body.nameMK,
             nameEN: body.nameEN,
             descriptionMK: body.descriptionMK || '',
@@ -42,10 +68,20 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         await connectToDatabase();
-        const menuItems = await MenuItem.find().sort('order');
+        const { searchParams } = new URL(request.url);
+        const menuId = searchParams.get('menuId');
+
+        if (!menuId) {
+            return NextResponse.json(
+                { error: 'Menu ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const menuItems = await MenuItem.find({ menuId }).sort('order');
         return NextResponse.json(menuItems);
     } catch (error) {
         console.error('Error fetching menu items:', error);
@@ -56,10 +92,23 @@ export async function GET() {
     }
 }
 
-// For updating a menu item
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
         await connectToDatabase();
+
+        // Verify authentication
+        const cookieStore = cookies();
+        const token = cookieStore.get('auth_token')?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        }
+
+        const user = await getCurrentUser(token);
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 401 });
+        }
+
         const body = await request.json();
 
         const menuItemData = {
@@ -103,10 +152,22 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 }
 
-// For deleting a menu item
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
     try {
         await connectToDatabase();
+
+        // Verify authentication
+        const cookieStore = cookies();
+        const token = cookieStore.get('auth_token')?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        }
+
+        const user = await getCurrentUser(token);
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 401 });
+        }
 
         const menuItem = await MenuItem.findById(params.id);
         if (!menuItem) {

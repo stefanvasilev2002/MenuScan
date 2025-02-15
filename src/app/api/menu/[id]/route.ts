@@ -1,3 +1,4 @@
+//api/menu/[id]/route.ts
 import { connectToDatabase } from '@/lib/db';
 import { MenuItem } from '@/models/MenuItem';
 import { NextResponse } from 'next/server';
