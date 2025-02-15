@@ -99,7 +99,7 @@ const LoginPage = () => {
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.error || 'Failed to login');
-            window.location.href = '/dashboard';
+            router.push('/dashboard');
         } catch (error) {
             setGeneralError(error.message);
         } finally {
