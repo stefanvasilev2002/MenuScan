@@ -10,6 +10,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        const id = params.id;
         await connectToDatabase();
 
         // Get the auth token from cookies
@@ -29,14 +30,14 @@ export async function GET(
         }
 
         // Check if this is a new menu creation
-        if (params.id === 'new') {
+        if (id === 'new') {
             return NextResponse.json({ authorized: true });
         }
 
         // Find the menu
-        const menu = await Menu.findById(params.id);
+        const menu = await Menu.findById(id);
         if (!menu) {
-            console.log('Menu not found:', params.id);
+            console.log('Menu not found:', id);
             return NextResponse.json({ error: 'Menu not found' }, { status: 404 });
         }
 

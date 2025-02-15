@@ -5,16 +5,17 @@ import { jwtVerify } from 'jose';
 
 // Routes that require authentication
 const PROTECTED_ROUTES = ['/dashboard'];
-// Routes that are public
-const PUBLIC_ROUTES = ['/login', '/register'];
+// Routes that are public (including the landing page)
+const PUBLIC_ROUTES = ['/login', '/register', '/'];
 // Special routes that don't need ownership verification
 const SPECIAL_ROUTES = ['/dashboard/menu/new'];
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Allow public routes
-    if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    // Allow public routes (including landing page)
+    if (PUBLIC_ROUTES.some(route => pathname === route ||
+        (route !== '/' && pathname.startsWith(route)))) {
         return NextResponse.next();
     }
 

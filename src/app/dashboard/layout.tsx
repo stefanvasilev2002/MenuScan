@@ -1,10 +1,9 @@
-// app/dashboard/layout.tsx
 import React from 'react';
 import Link from 'next/link';
+import { connectToDatabase } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/db';
-import { Menu } from '@/models/Menu';
+import { Menu } from '@/models/menu';
 
 async function getMenu(userId: string) {
     await connectToDatabase();
