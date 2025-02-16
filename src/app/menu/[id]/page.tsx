@@ -6,8 +6,51 @@ interface Props {
         id: string;
     };
 }
+interface Category {
+    _id: string;
+    nameMK: string;
+    nameEN: string;
+    slug: string;
+    order: number;
+    parentId?: string;
+    icon?: string;
+    color?: string;
+    isVisible: boolean;
+    children?: Category[];
+}
 
-async function getMenuItems(menuId: string) {
+interface MenuItem {
+    _id: string;
+    nameMK: string;
+    nameEN: string;
+    descriptionMK?: string;
+    descriptionEN?: string;
+    price: number;
+    category: string;
+    isAvailable: boolean;
+    ingredients?: string[];
+    allergens?: string[];
+    spicyLevel?: number;
+    isVegetarian?: boolean;
+    isVegan?: boolean;
+    imageUrl?: string;
+    imagePublicId?: string;
+}
+
+interface Menu {
+    id: string;
+    name: string;
+    theme: string;
+    settings: {
+        showPrices: boolean;
+        showDescriptions: boolean;
+        showAllergens: boolean;
+        showSpicyLevel: boolean;
+        showDietaryInfo: boolean;
+    };
+    isActive: boolean;
+}
+async function getMenuItems(menuId: string): Promise<MenuItem[]> {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/menu?menuId=${menuId}`, {
         cache: 'no-store',
         headers: {
@@ -24,7 +67,7 @@ async function getMenuItems(menuId: string) {
     return res.json();
 }
 
-async function getCategories(menuId: string) {
+async function getCategories(menuId: string): Promise<Category[]> {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories?menuId=${menuId}`, {
         cache: 'no-store',
         headers: {
@@ -37,7 +80,7 @@ async function getCategories(menuId: string) {
     return res.json();
 }
 
-async function getMenu(menuId: string) {
+async function getMenu(menuId: string): Promise<Menu> {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/menus/${menuId}`, {
         cache: 'no-store',
         headers: {
@@ -51,14 +94,18 @@ async function getMenu(menuId: string) {
         }
         throw new Error('Failed to fetch menu');
     }
-    return res.json();
+
+    const menu = await res.json();
+
+    if (!menu.isActive) {
+        notFound();
+    }
+
+    return menu;
 }
 
 export default async function MenuPage({ params }: Props) {
-    // Await params before accessing its properties
-    const { id: menuId } = await params;
-
-    console.log('Rendering menu page for ID:', menuId);
+    const { id: menuId } = params;
 
     try {
         const [menuItems, categories, menu] = await Promise.all([
@@ -66,6 +113,10 @@ export default async function MenuPage({ params }: Props) {
             getCategories(menuId),
             getMenu(menuId),
         ]);
+
+        if (!menu.isActive) {
+            notFound();
+        }
 
         return (
             <MenuPageClient

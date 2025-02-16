@@ -40,12 +40,6 @@ export default function DashboardLayoutUI({ menuId, children }) {
                         <span className="mr-2">📑</span>
                         Категории
                     </Link>
-                    <Link
-                        href={menuId ? `/dashboard/menu/${menuId}/qr` : '/dashboard'}
-                        className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
-                        <span className="mr-2">📱</span>
-                        QR Код
-                    </Link>
 
                     <Link href="/dashboard/settings"
                           className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">

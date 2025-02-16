@@ -9,6 +9,7 @@ export async function GET(
 ) {
     try {
         await connectToDatabase();
+        console.log('its from here')
         const menuItem = await MenuItem.findById(params.id);
 
         if (!menuItem) {

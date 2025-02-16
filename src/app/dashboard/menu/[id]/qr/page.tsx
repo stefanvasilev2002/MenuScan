@@ -3,6 +3,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Link from "next/link";
 
 interface Menu {
     _id: string;
@@ -84,6 +85,10 @@ export default function QRCodePage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
+            <Link href="/dashboard/menus" className="text-blue-500 hover:text-blue-600">
+                ← Back to Menus
+            </Link>
+            <br></br>
             <h1 className="text-2xl font-bold mb-8">QR Код за {menu?.name}</h1>
 
             <div className="grid gap-8 md:grid-cols-2">

@@ -1,4 +1,4 @@
-// app/dashboard/menu/[id]/items/page.tsx
+// app/dashboard/menu/[id]/items/CategoriesPage.tsx
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { MenuDashboard } from '@/components/dashboard/MenuDashboard';

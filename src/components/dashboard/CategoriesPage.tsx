@@ -1,9 +1,9 @@
+//components/dashboard/CategoriesPage.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import {Eye, EyeOff, ChevronDown, ChevronRight, GripVertical, Plus} from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 
 interface Category {
     _id: string;
@@ -152,10 +152,11 @@ const NestedDraggable = ({
     );
 };
 
-export default function CategoriesPage() {
-    const searchParams = useSearchParams();
-    const menuId = searchParams.get('menuId');
+interface CategoriesPageProps {
+    menuId: string;
+}
 
+export default function CategoriesPage({ menuId }: CategoriesPageProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [newCategory, setNewCategory] = useState({
         nameMK: '',

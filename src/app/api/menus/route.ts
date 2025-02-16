@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         // Check user's subscription plan and menu limit
         const userMenuCount = await Menu.countDocuments({ userId: user._id });
         const menuLimit = {
-            free: 1,
+            free: 2,
             basic: 3,
             premium: 10
         }[user.plan];
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         await connectToDatabase();
 
         // Get the current user
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const token = cookieStore.get('auth_token')?.value;
 
         if (!token) {
