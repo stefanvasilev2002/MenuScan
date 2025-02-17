@@ -24,21 +24,14 @@ export default function DashboardLayoutUI({ menuId, children }) {
             {/* Sidebar */}
             <aside className="w-64 bg-gray-100 p-6">
                 <div className="mb-8">
-                    <h1 className="text-xl font-bold">Menu App</h1>
+                    <Link href="/dashboard" className="text-xl font-bold">Menu App</Link>
                 </div>
 
                 <nav className="space-y-2">
-                    <Link href="/dashboard"
+                    <Link href="/dashboard/menus"
                           className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
                         <span className="mr-2">📋</span>
-                        Мени
-                    </Link>
-                    <Link
-                        href={menuId ? `/dashboard/categories?menuId=${menuId}` : '/dashboard'}
-                        className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg"
-                    >
-                        <span className="mr-2">📑</span>
-                        Категории
+                        Менија
                     </Link>
 
                     <Link href="/dashboard/settings"

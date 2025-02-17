@@ -19,7 +19,7 @@ const translations = {
         emailInvalid: "Please enter a valid email",
         passwordRequired: "Password is required",
         passwordMin: "Password must be at least 8 characters",
-        welcomeBack: "Welcome back to MenuQR",
+        welcomeBack: "Welcome back to MenuScan",
         manageMenus: "Manage your digital menus and QR codes"
     },
     mk: {
@@ -35,7 +35,7 @@ const translations = {
         emailInvalid: "Внесете валидна емаил адреса",
         passwordRequired: "Потребна е лозинка",
         passwordMin: "Лозинката мора да има најмалку 8 карактери",
-        welcomeBack: "Добредојдовте во MenuQR",
+        welcomeBack: "Добредојдовте назад на MenuScan",
         manageMenus: "Управувајте со вашите дигитални менија и QR кодови"
     }
 };

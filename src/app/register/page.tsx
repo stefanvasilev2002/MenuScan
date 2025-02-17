@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Store, QrCode, Coffee, BarChart } from 'lucide-react';
+import { Store, QrCode, Coffee, BarChart, Eye, EyeOff } from 'lucide-react';
 
 const translations = {
     en: {
         backToHome: "Back to home",
-        createAccount: "Create your MenuQR account",
+        createAccount: "Create your MenuScan account",
         subtitle: "Start creating digital menus for your restaurant",
         businessName: "Restaurant Name",
         businessNamePlaceholder: "Enter your restaurant name",
@@ -32,11 +32,16 @@ const translations = {
             menuDesc: "Easy-to-update digital menus",
             analytics: "Customer Analytics",
             analyticsDesc: "Track menu views and popular items"
-        }
+        },
+        confirmPassword: "Confirm Password",
+        confirmPasswordPlaceholder: "Re-enter your password",
+        passwordMismatch: "Passwords do not match",
+        showPassword: "Show password",
+        hidePassword: "Hide password"
     },
     mk: {
         backToHome: "Назад кон почетна",
-        createAccount: "Креирајте MenuQR профил",
+        createAccount: "Креирајте MenuScan профил",
         subtitle: "Започнете со креирање дигитални менија за вашиот ресторан",
         businessName: "Име на ресторан",
         businessNamePlaceholder: "Внесете го името на вашиот ресторан",
@@ -61,7 +66,12 @@ const translations = {
             menuDesc: "Лесно ажурирање на дигитални менија",
             analytics: "Аналитика на клиенти",
             analyticsDesc: "Следете прегледи на мени и популарни ставки"
-        }
+        },
+        confirmPassword: "Потврди лозинка",
+        confirmPasswordPlaceholder: "Повторно внесете ја лозинката",
+        passwordMismatch: "Лозинките не се совпаѓаат",
+        showPassword: "Прикажи лозинка",
+        hidePassword: "Сокриј лозинка"
     }
 };
 
@@ -73,17 +83,21 @@ const RegisterPage = () => {
     const [formData, setFormData] = useState({
         businessName: '',
         email: '',
-        password: ''
+        password: '',
+        confirmPassword: ''
     });
 
     const [errors, setErrors] = useState({
         businessName: '',
         email: '',
-        password: ''
+        password: '',
+        confirmPassword: ''
     });
 
     const [isLoading, setIsLoading] = useState(false);
     const [generalError, setGeneralError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const validatePassword = (password) => {
         const conditions = {
@@ -100,7 +114,8 @@ const RegisterPage = () => {
         const newErrors = {
             businessName: '',
             email: '',
-            password: ''
+            password: '',
+            confirmPassword: ''
         };
 
         if (!formData.businessName.trim()) {
@@ -116,6 +131,10 @@ const RegisterPage = () => {
         const passwordConditions = validatePassword(formData.password);
         if (!Object.values(passwordConditions).every(Boolean)) {
             newErrors.password = 'Password does not meet all requirements';
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = t.passwordMismatch;
         }
 
         setErrors(newErrors);
@@ -227,34 +246,70 @@ const RegisterPage = () => {
                                 <label className="block text-sm font-medium text-gray-700">
                                     {t.password}
                                 </label>
-                                <input
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <div className="mt-2">
-                                    <p className="text-sm text-gray-600 mb-1">{t.passwordRequirements}</p>
-                                    <ul className="space-y-1">
-                                        <li className={`text-sm ${passwordConditions.length ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {t.lengthReq}
-                                        </li>
-                                        <li className={`text-sm ${passwordConditions.upper ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {t.upperReq}
-                                        </li>
-                                        <li className={`text-sm ${passwordConditions.lower ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {t.lowerReq}
-                                        </li>
-                                        <li className={`text-sm ${passwordConditions.number ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {t.numberReq}
-                                        </li>
-                                        <li className={`text-sm ${passwordConditions.special ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {t.specialReq}
-                                        </li>
-                                    </ul>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                        aria-label={showPassword ? t.hidePassword : t.showPassword}
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                                    </button>
                                 </div>
-                            </div>
 
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    {t.confirmPassword}
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={formData.confirmPassword}
+                                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                                        placeholder={t.confirmPasswordPlaceholder}
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                        aria-label={showConfirmPassword ? t.hidePassword : t.showPassword}
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4"/> :
+                                            <Eye className="w-4 h-4"/>}
+                                    </button>
+                                </div>
+                                {errors.confirmPassword && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                                )}
+                            </div>
+                            <div className="mt-2">
+                                <p className="text-sm text-gray-600 mb-1">{t.passwordRequirements}</p>
+                                <ul className="space-y-1">
+                                    <li className={`text-sm ${passwordConditions.length ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {t.lengthReq}
+                                    </li>
+                                    <li className={`text-sm ${passwordConditions.upper ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {t.upperReq}
+                                    </li>
+                                    <li className={`text-sm ${passwordConditions.lower ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {t.lowerReq}
+                                    </li>
+                                    <li className={`text-sm ${passwordConditions.number ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {t.numberReq}
+                                    </li>
+                                    <li className={`text-sm ${passwordConditions.special ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {t.specialReq}
+                                    </li>
+                                </ul>
+                            </div>
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -288,13 +343,13 @@ const RegisterPage = () => {
                 {/* Right side - Features */}
                 <div className="hidden lg:flex lg:w-1/2 bg-blue-600 p-12 flex-col justify-between">
                     <div className="text-white">
-                        <Store className="w-10 h-10" />
+                        <Store className="w-10 h-10"/>
                         <h1 className="mt-12 text-4xl font-bold">{t.features.title}</h1>
                     </div>
 
                     <div className="grid grid-cols-1 gap-8">
                         <div className="bg-white/10 p-6 rounded-lg flex items-start space-x-4">
-                            <QrCode className="w-6 h-6 text-white" />
+                            <QrCode className="w-6 h-6 text-white"/>
                             <div>
                                 <div className="text-white text-lg font-semibold">{t.features.qr}</div>
                                 <p className="text-blue-100 mt-2">{t.features.qrDesc}</p>
@@ -302,7 +357,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="bg-white/10 p-6 rounded-lg flex items-start space-x-4">
-                            <Coffee className="w-6 h-6 text-white" />
+                            <Coffee className="w-6 h-6 text-white"/>
                             <div>
                                 <div className="text-white text-lg font-semibold">{t.features.menu}</div>
                                 <p className="text-blue-100 mt-2">{t.features.menuDesc}</p>
@@ -310,7 +365,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="bg-white/10 p-6 rounded-lg flex items-start space-x-4">
-                            <BarChart className="w-6 h-6 text-white" />
+                            <BarChart className="w-6 h-6 text-white"/>
                             <div>
                                 <div className="text-white text-lg font-semibold">{t.features.analytics}</div>
                                 <p className="text-blue-100 mt-2">{t.features.analyticsDesc}</p>
