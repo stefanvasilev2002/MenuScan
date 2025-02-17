@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import {Eye, EyeOff, ChevronDown, ChevronRight, GripVertical, Plus} from 'lucide-react';
+import Link from "next/link";
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 interface Category {
     _id: string;
@@ -353,29 +355,43 @@ export default function CategoriesPage({ menuId }: CategoriesPageProps) {
         </Draggable>
     );
 
-    // In the CategoriesPage component, update the handleSubmit function:
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         const isEditing = !!editingCategory;
-        const url = isEditing
-            ? `/api/categories/${editingCategory._id}`
-            : '/api/categories';
+        const categoryData = isEditing ? editingCategory : newCategory;
 
         try {
-            console.log('Submitting:', isEditing ? editingCategory : newCategory);
-            console.log('URL:', url);
-            console.log('Menu ID:', menuId);
+            // Validate hierarchy if there's a parent
+            if (categoryData.parentId) {
+                const validateResponse = await fetch('/api/categories/validate-hierarchy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        categoryId: isEditing ? editingCategory._id : null,
+                        parentId: categoryData.parentId
+                    }),
+                });
+
+                const validationResult = await validateResponse.json();
+                if (!validationResult.valid) {
+                    setError(validationResult.error);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const url = isEditing
+                ? `/api/categories/${editingCategory._id}`
+                : '/api/categories';
+
             const response = await fetch(url, {
                 method: isEditing ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(isEditing ? {
-                    ...editingCategory,
-                    menuId
-                } : {
-                    ...newCategory,
+                body: JSON.stringify({
+                    ...categoryData,
                     menuId
                 }),
             });
@@ -384,7 +400,6 @@ export default function CategoriesPage({ menuId }: CategoriesPageProps) {
                 if (isEditing) {
                     setEditingCategory(null);
                 } else {
-                    // Reset form while maintaining menuId
                     setNewCategory({
                         nameMK: '',
                         nameEN: '',
@@ -406,7 +421,6 @@ export default function CategoriesPage({ menuId }: CategoriesPageProps) {
             setLoading(false);
         }
     };
-
     const handleDelete = async (id: string) => {
         if (!confirm('Дали сте сигурни дека сакате да ја избришете оваа категорија?')) {
             return;
@@ -430,6 +444,9 @@ export default function CategoriesPage({ menuId }: CategoriesPageProps) {
 
     return (
         <div className="max-w-4xl mx-auto p-6">
+            <Link href={`/dashboard/menus/${menuId}/items`}>
+                Back to Menu
+            </Link>
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-2xl font-bold">Управувај со Категории</h1>
                 <button
@@ -504,15 +521,15 @@ export default function CategoriesPage({ menuId }: CategoriesPageProps) {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Icon (Emoji)
                             </label>
-                            <input
-                                type="text"
-                                value={editingCategory?.icon || newCategory.icon}
-                                onChange={(e) => editingCategory
-                                    ? setEditingCategory({...editingCategory, icon: e.target.value})
-                                    : setNewCategory({...newCategory, icon: e.target.value})
-                                }
-                                className="w-full p-2 border rounded-lg"
-                                placeholder="📱"
+                            <EmojiPicker
+                                currentEmoji={editingCategory?.icon || newCategory.icon}
+                                onEmojiSelect={(emoji) => {
+                                    if (editingCategory) {
+                                        setEditingCategory({...editingCategory, icon: emoji});
+                                    } else {
+                                        setNewCategory({...newCategory, icon: emoji});
+                                    }
+                                }}
                             />
                         </div>
 

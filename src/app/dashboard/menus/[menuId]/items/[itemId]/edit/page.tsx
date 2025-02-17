@@ -1,14 +1,17 @@
+//dashboard/menus/[menuId]/items/[itemId]/edit/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, {JSX, useEffect, useState} from 'react';
 import { useRouter } from 'next/navigation';
 import ImageUpload from "@/components/image/ImageUpload";
 
 interface Category {
+    slug: string;
     _id: string;
     nameMK: string;
     nameEN: string;
-    slug: string;
+    parentId?: string;
+    children?: Category[];
 }
 
 interface MenuItem {
@@ -30,7 +33,12 @@ interface MenuItem {
     imagePublicId?: string;
 }
 
-export default function EditItemPage({ params }: { params: { id: string } }) {
+interface PageParams {
+    menuId: string;
+    itemId: string;
+}
+
+export default function EditItemPage({ params }: { params: PageParams }) {
     const router = useRouter();
     const [categories, setCategories] = useState<Category[]>([]);
     const [formData, setFormData] = useState({
@@ -54,12 +62,30 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
     const [loading, setLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Recursive function to flatten categories for select options
+    const flattenCategories = (cats: Category[], level = 0): JSX.Element[] => {
+        return cats.reduce((acc: JSX.Element[], cat) => {
+            // Add padding based on level for visual hierarchy
+            const padding = '\u00A0'.repeat(level * 4);
+            acc.push(
+                <option key={cat.slug} value={cat.slug}>
+                    {padding}{cat.nameMK}
+                </option>
+            );
+            if (cat.children && cat.children.length > 0) {
+                acc.push(...flattenCategories(cat.children, level + 1));
+            }
+            return acc;
+        }, []);
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Update the category fetch URL to use menuId
                 const [categoriesRes, menuItemRes] = await Promise.all([
-                    fetch('/api/categories'),
-                    fetch(`/api/menu/${params.id}`)
+                    fetch(`/api/categories?menuId=${params.menuId}`),
+                    fetch(`/api/menu/${params.itemId}`)
                 ]);
 
                 if (!categoriesRes.ok || !menuItemRes.ok) {
@@ -95,8 +121,10 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
             }
         };
 
-        fetchData();
-    }, [params.id]);
+        if (params.menuId && params.itemId) {
+            fetchData();
+        }
+    }, [params.menuId, params.itemId]);
 
     const handleArrayFieldChange = (field: 'ingredients' | 'allergens', index: number, value: string) => {
         const newArray = [...formData[field]];
@@ -121,7 +149,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
         setLoading(true);
 
         try {
-            const response = await fetch(`/api/menu/${params.id}`, {
+            const response = await fetch(`/api/menu/${params.itemId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -139,7 +167,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                 throw new Error(data.error || 'Failed to update menu item');
             }
 
-            router.push('/dashboard');
+            router.push(`/dashboard/menus/${params.menuId}/items`);
             router.refresh();
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to update menu item');
@@ -158,6 +186,15 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
 
     return (
         <div className="max-w-2xl mx-auto p-6">
+            <div className="mb-6">
+                <button
+                    onClick={() => router.push(`/dashboard/menus/${params.menuId}`)}
+                    className="text-blue-500 hover:text-blue-600"
+                >
+                    ← Назад кон менито
+                </button>
+            </div>
+
             <h1 className="text-2xl font-bold mb-8">Измени Продукт</h1>
 
             {error && (
@@ -261,16 +298,12 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                         </label>
                         <select
                             value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            onChange={(e) => setFormData({...formData, category: e.target.value})}
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             required
                         >
                             <option value="">Избери категорија</option>
-                            {categories.map((category) => (
-                                <option key={category._id} value={category.slug}>
-                                    {category.nameMK}
-                                </option>
-                            ))}
+                            {flattenCategories(categories)}
                         </select>
                     </div>
                 </div>
@@ -284,7 +317,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                             <input
                                 type="checkbox"
                                 checked={formData.isVegetarian}
-                                onChange={(e) => setFormData({ ...formData, isVegetarian: e.target.checked })}
+                                onChange={(e) => setFormData({...formData, isVegetarian: e.target.checked})}
                                 className="rounded"
                             />
                             Вегетаријанско
@@ -405,7 +438,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                     </button>
                     <button
                         type="button"
-                        onClick={() => router.push('/dashboard')}
+                        onClick={() => router.push('/dashboard/menus/' + params.menuId + '/items')}
                         className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg"
                     >
                         Откажи
@@ -430,7 +463,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                                 }
 
                                 // Delete menu item
-                                const response = await fetch(`/api/menu/${params.id}`, {
+                                const response = await fetch(`/api/menus/${params.menuId}/items/${params.itemId}`, {
                                     method: 'DELETE',
                                 });
 
@@ -438,7 +471,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
                                     throw new Error('Failed to delete item');
                                 }
 
-                                router.push('/dashboard');
+                                router.push(`/dashboard/menus/${params.menuId}`);
                                 router.refresh();
                             } catch (error) {
                                 setError('Failed to delete item');

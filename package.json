@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.2",
     "@types/mongoose": "^5.11.97",
     "bcryptjs": "^3.0.0",

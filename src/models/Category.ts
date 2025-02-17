@@ -28,7 +28,7 @@ const CategorySchema = new mongoose.Schema({
     },
     icon: {
         type: String,
-        default: null,
+        default: '📋',
     },
     color: {
         type: String,

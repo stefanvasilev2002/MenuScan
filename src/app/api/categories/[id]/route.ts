@@ -2,6 +2,7 @@
 import { connectToDatabase } from '@/lib/db';
 import { Category } from '@/models/Category';
 import { NextResponse } from 'next/server';
+import {MenuItem} from "@/models/MenuItem";
 function slugify(text: string): string {
     // Transliteration map for Cyrillic to Latin
     const cyrillicToLatin: { [key: string]: string } = {
@@ -42,27 +43,52 @@ export async function DELETE(
     try {
         await connectToDatabase();
 
-        // First, check if category has children
-        const hasChildren = await Category.exists({ parentId: params.id });
-        if (hasChildren) {
-            return NextResponse.json(
-                { error: 'Cannot delete category with subcategories' },
-                { status: 400 }
-            );
-        }
-
-        const category = await Category.findByIdAndDelete(params.id);
-
-        if (!category) {
+        // Get the category and its menuId before deletion
+        const categoryToDelete = await Category.findById(params.id);
+        if (!categoryToDelete) {
             return NextResponse.json(
                 { error: 'Category not found' },
                 { status: 404 }
             );
         }
 
+        // Find or create default category
+        let defaultCategory = await Category.findOne({
+            menuId: categoryToDelete.menuId,
+            nameMK: 'Некатегоризирано',
+            nameEN: 'Uncategorized'
+        });
+
+        if (!defaultCategory) {
+            defaultCategory = await Category.create({
+                menuId: categoryToDelete.menuId,
+                nameMK: 'Некатегоризирано',
+                nameEN: 'Uncategorized',
+                slug: 'uncategorized',
+                order: 999999, // Put it at the end
+                isVisible: true,
+                color: '#808080'
+            });
+        }
+
+        // Update all menu items using this category
+        await MenuItem.updateMany(
+            { category: categoryToDelete.slug },
+            { category: defaultCategory.slug }
+        );
+
+        // Update children categories to point to the parent of the deleted category
+        await Category.updateMany(
+            { parentId: categoryToDelete._id },
+            { parentId: categoryToDelete.parentId }
+        );
+
+        // Delete the category
+        await Category.findByIdAndDelete(params.id);
+
         // Reorder remaining categories
         const remainingCategories = await Category.find({
-            parentId: category.parentId
+            parentId: categoryToDelete.parentId
         }).sort('order');
 
         for (let i = 0; i < remainingCategories.length; i++) {
@@ -71,7 +97,10 @@ export async function DELETE(
             });
         }
 
-        return NextResponse.json({ message: 'Category deleted successfully' });
+        return NextResponse.json({
+            message: 'Category deleted successfully',
+            defaultCategoryId: defaultCategory._id
+        });
     } catch (error) {
         console.error('Error deleting category:', error);
         return NextResponse.json(
@@ -80,7 +109,6 @@ export async function DELETE(
         );
     }
 }
-
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
