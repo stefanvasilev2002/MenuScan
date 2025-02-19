@@ -126,6 +126,7 @@ export default function ImageUpload({
                             className="object-cover rounded-lg"
                         />
                         <button
+                            type="button"
                             onClick={handleDelete}
                             disabled={isUploading}
                             className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors disabled:bg-gray-400"
@@ -143,6 +144,7 @@ export default function ImageUpload({
                             className="hidden"
                         />
                         <button
+                            type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
                             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
