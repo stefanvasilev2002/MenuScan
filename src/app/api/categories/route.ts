@@ -34,6 +34,7 @@ function slugify(text: string): string {
         .replace(/-+$/, '');
 }
 
+// Modify your GET endpoint in api/categories/route.ts
 export async function GET(request: Request) {
     try {
         await connectToDatabase();
@@ -44,32 +45,60 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
         }
 
-        // Fetch all categories for the menu
+        // Fetch all categories for the menu and log them
         const allCategories = await Category.find({ menuId }).sort({ order: 1 });
+        console.log('All fetched categories:', JSON.stringify(allCategories, null, 2));
 
-        // Build the hierarchy
+        // Log categories before building hierarchy
+        console.log('Categories before hierarchy:',
+            allCategories.map(cat => ({
+                id: cat._id,
+                slug: cat.slug,
+                parentId: cat.parentId,
+                isVisible: cat.isVisible
+            }))
+        );
+
+        // Build the hierarchy with additional logging
         const categoryMap = new Map();
         allCategories.forEach(category => {
-            categoryMap.set(category._id.toString(), {
+            const categoryObj = {
                 ...category.toObject(),
                 children: []
-            });
+            };
+            categoryMap.set(category._id.toString(), categoryObj);
+            console.log(`Added to map: ${category.slug} with ID ${category._id}`);
         });
 
         const rootCategories = [];
+        const orphanedCategories = []; // Track categories that should have parents but don't
+
         allCategories.forEach(category => {
             const categoryObj = categoryMap.get(category._id.toString());
             if (category.parentId) {
                 const parent = categoryMap.get(category.parentId.toString());
                 if (parent) {
                     parent.children.push(categoryObj);
+                    console.log(`Added ${category.slug} as child to ${parent.slug}`);
+                } else {
+                    console.log(`Warning: Category ${category.slug} has parentId ${category.parentId} but parent not found`);
+                    orphanedCategories.push(categoryObj);
                 }
             } else {
                 rootCategories.push(categoryObj);
+                console.log(`Added ${category.slug} as root category`);
             }
         });
 
-        return NextResponse.json(rootCategories);
+        // Log final structure
+        console.log('Root categories:', rootCategories.map(cat => cat.slug));
+        console.log('Orphaned categories:', orphanedCategories.map(cat => cat.slug));
+
+        // Return both root and orphaned categories
+        return NextResponse.json({
+            categories: rootCategories,
+            orphanedCategories: orphanedCategories
+        });
     } catch (error) {
         console.error('Error fetching categories:', error);
         return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });

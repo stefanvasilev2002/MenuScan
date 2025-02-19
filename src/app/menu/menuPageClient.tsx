@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import {JSX, useState} from 'react';
 import Image from 'next/image';
 import { PriceDisplay } from '@/components/currency/PriceDisplay';
 import {Currency} from "@/types/types";
@@ -41,27 +41,45 @@ interface MenuPageProps {
     initialMenuItems: MenuItem[];
     categories: Category[];
 }
-function buildCategoryTree(categories: Category[]): Category[] {
-    const categoryMap = new Map<string, Category>();
-    const rootCategories: Category[] = [];
+// Helper function to get all child category slugs
+function getAllChildCategorySlugs(category: Category): string[] {
+    let slugs: string[] = [category.slug];
+    if (category.children) {
+        category.children.forEach(child => {
+            slugs = [...slugs, ...getAllChildCategorySlugs(child)];
+        });
+    }
+    return slugs;
+}
 
-    // First, create a map of all categories
-    categories.forEach(category => {
-        categoryMap.set(category._id, { ...category, children: [] });
+function buildCategoryTree(categories: Category[]): Category[] {
+    console.log('Building tree from categories:', JSON.stringify(categories, null, 2));
+
+    // First, make a deep copy of the categories to avoid modifying the original
+    const categoriesCopy = categories.map(cat => ({
+        ...cat,
+        children: Array.isArray(cat.children) ? [...cat.children] : []
+    }));
+
+    // Create a map for quick lookups
+    const categoryMap = new Map<string, Category>();
+
+    // First pass: create the map
+    categoriesCopy.forEach(category => {
+        categoryMap.set(category._id, category);
+        console.log(`Added to map: ${category.slug} with ${category.children?.length || 0} children`);
     });
 
-    // Then, build the tree structure
-    categoryMap.forEach(category => {
-        if (category.parentId && categoryMap.has(category.parentId)) {
-            const parent = categoryMap.get(category.parentId)!;
-            parent.children = parent.children || [];
-            parent.children.push(category);
-        } else {
+    // Second pass: build the tree
+    const rootCategories: Category[] = [];
+    categoriesCopy.forEach(category => {
+        if (!category.parentId) {
             rootCategories.push(category);
+            console.log(`Added ${category.slug} as root with ${category.children?.length || 0} children`);
         }
     });
 
-    // Sort all levels by order
+    // Sort by order at each level
     const sortByOrder = (cats: Category[]) => {
         cats.sort((a, b) => a.order - b.order);
         cats.forEach(cat => {
@@ -70,11 +88,18 @@ function buildCategoryTree(categories: Category[]): Category[] {
             }
         });
     };
+
     sortByOrder(rootCategories);
+
+    console.log('Final root categories with children:',
+        JSON.stringify(rootCategories.map(cat => ({
+            slug: cat.slug,
+            children: (cat.children || []).map(child => child.slug)
+        })), null, 2)
+    );
 
     return rootCategories;
 }
-
 function CategorySection({
                              category,
                              items,
@@ -88,41 +113,69 @@ function CategorySection({
     currency: Currency;
     level?: number;
 }) {
-    const categoryItems = items.filter(item => item.category === category.slug);
-    const hasItems = categoryItems.length > 0;
-    const hasVisibleContent = hasItems || (category.children?.some(child =>
-        items.some(item => item.category === child.slug)) ?? false);
+    console.log(`Rendering category: ${category.slug}, level: ${level}`);
+    console.log('Category full data:', JSON.stringify(category, null, 2));
 
-    if (!hasVisibleContent) return null;
+    if (!category.isVisible) {
+        console.log(`Category ${category.slug} not visible`);
+        return null;
+    }
+
+    // Get all items for this category branch
+    const getAllItems = (cat: Category): MenuItem[] => {
+        let result = items.filter(item => item.category === cat.slug);
+        if (cat.children?.length) {
+            cat.children.forEach(child => {
+                result = [...result, ...getAllItems(child)];
+            });
+        }
+        return result;
+    };
+
+    const allItems = getAllItems(category);
+    console.log(`All items for ${category.slug} (including children):`, allItems);
+
+    // Get direct items
+    const directItems = items.filter(item => item.category === category.slug);
+    console.log(`Direct items for ${category.slug}:`, directItems);
+
+    // If no items in this branch and no children with items, don't render
+    if (allItems.length === 0) {
+        console.log(`No items for category ${category.slug} or its children`);
+        return null;
+    }
 
     return (
         <div className={`space-y-8 ${level > 0 ? 'ml-6' : ''}`}>
             <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-3 ${level > 0 ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900`}>
+                <div className={`flex items-center gap-3 ${level > 0 ? 'text-2xl' : 'text-3xl'} font-bold`}
+                     style={{ color: category.color || '#1F2937' }}>
                     {category.icon && <span className="text-2xl">{category.icon}</span>}
                     <h2>{lang === 'mk' ? category.nameMK : category.nameEN}</h2>
                 </div>
                 <div className="flex-1 border-b-2 border-gray-200"></div>
             </div>
 
-            {/* Display items in this category */}
-            {hasItems && (
+            {/* Display direct items */}
+            {directItems.length > 0 && (
                 <div className="grid md:grid-cols-2 gap-8">
-                    {categoryItems.map((item) => (
-                        <MenuItemCard key={item._id}
-                                      item={item}
-                                      lang={lang}
-                                      currency={currency}
-                                      showOtherCurrencies={true} />
+                    {directItems.map((item) => (
+                        <MenuItemCard
+                            key={item._id}
+                            item={item}
+                            lang={lang}
+                            currency={currency}
+                            showOtherCurrencies={true}
+                        />
                     ))}
                 </div>
             )}
 
-            {/* Display subcategories */}
-            {category.children?.map(subcategory => (
+            {/* Display child categories */}
+            {category.children?.map(child => (
                 <CategorySection
-                    key={subcategory._id}
-                    category={subcategory}
+                    key={child._id}
+                    category={child}
                     items={items}
                     lang={lang}
                     level={level + 1}
@@ -132,6 +185,7 @@ function CategorySection({
         </div>
     );
 }
+
 function FilterIcon() {
     return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,13 +304,78 @@ function MenuItemCard({
         </div>
     );
 }
+function FilterSection({ categories, selectedCategory, setSelectedCategory, lang }: {
+    categories: Category[];
+    selectedCategory: string;
+    setSelectedCategory: (category: string) => void;
+    lang: 'mk' | 'en';
+}) {
+    // Recursive function to create category options with proper indentation
+    const renderCategoryOptions = (categories: Category[], level = 0): JSX.Element[] => {
+        return categories.filter(cat => cat.isVisible).flatMap(category => {
+            const indent = '\u00A0'.repeat(level * 4);
+            const options = [
+                <option key={category.slug} value={category.slug}>
+                    {indent}{lang === 'mk' ? category.nameMK : category.nameEN}
+                </option>
+            ];
 
+            if (category.children?.length) {
+                options.push(...renderCategoryOptions(category.children, level + 1));
+            }
+
+            return options;
+        });
+    };
+
+    return (
+        <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full p-3 border rounded-xl bg-white text-lg"
+        >
+            <option value="">{lang === 'mk' ? 'Сите категории' : 'All categories'}</option>
+            {renderCategoryOptions(categories)}
+        </select>
+    );
+}
 export default function MenuPageClient({ initialMenuItems, categories }: MenuPageProps) {
     const [lang, setLang] = useState<'mk' | 'en'>('mk');
     const [currency, setCurrency] = useState<Currency>('MKD');
 
+    // Extract categories array from the object structure
+    const categoriesArray = Array.isArray(categories) ? categories : categories?.categories || [];
+
+    console.log('Categories array:', categoriesArray);
+    console.log('Categories children:', categoriesArray.map(cat => cat.children));
+
+    // Log unique category slugs from menu items
+    const uniqueItemCategories = [...new Set(initialMenuItems.map(item => item.category))];
+    console.log('Unique categories from menu items:', uniqueItemCategories);
+
+    const getAllCategorySlugs = (cats: Category[]): string[] => {
+        return cats.reduce((acc: string[], cat: Category) => {
+            acc.push(cat.slug);
+            if (cat.children?.length) {
+                acc.push(...getAllCategorySlugs(cat.children));
+            }
+            return acc;
+        }, []);
+    };
+
+    const allCategorySlugs = getAllCategorySlugs(categoriesArray);
+    console.log('All category slugs including nested:', allCategorySlugs);
+
+    // Find orphaned items
+    const orphanedItems = initialMenuItems.filter(
+        item => !allCategorySlugs.includes(item.category)
+    );
+    console.log('Orphaned items:', orphanedItems);
+
+    const categoryTree = buildCategoryTree(categoriesArray);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
+
     const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({
         min: 0,
         max: Math.max(...initialMenuItems.map(item => item.price))
@@ -266,14 +385,37 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
         vegetarian: false,
         vegan: false
     });
-    const categoryTree = buildCategoryTree(categories);
-
     // Filter items based on all criteria
+    // Modified filteredItems logic in MenuPageClient
     const filteredItems = initialMenuItems.filter(item => {
         const matchesSearch =
             (item[lang === 'mk' ? 'nameMK' : 'nameEN'].toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (item[lang === 'mk' ? 'descriptionMK' : 'descriptionEN']?.toLowerCase().includes(searchQuery.toLowerCase())));
-        const matchesCategory = !selectedCategory || item.category === selectedCategory;
+
+        // Modified category matching to handle nested categories
+        const matchesCategory = (() => {
+            if (!selectedCategory) return true;
+
+            // Find the selected category and all its children
+            const findCategoryAndChildren = (cats: Category[]): Category | undefined => {
+                for (const cat of cats) {
+                    if (cat.slug === selectedCategory) return cat;
+                    if (cat.children?.length) {
+                        const found = findCategoryAndChildren(cat.children);
+                        if (found) return found;
+                    }
+                }
+                return undefined;
+            };
+
+            const selectedCat = findCategoryAndChildren(categories);
+            if (!selectedCat) return false;
+
+            // Get all possible category slugs (including children)
+            const validSlugs = getAllChildCategorySlugs(selectedCat);
+            return validSlugs.includes(item.category);
+        })();
+
         const matchesPrice = item.price >= priceRange.min && item.price <= priceRange.max;
         const matchesDietary =
             (!dietaryFilters.vegetarian || item.isVegetarian) &&
@@ -281,7 +423,7 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
 
         return item.isAvailable && matchesSearch && matchesCategory && matchesPrice && matchesDietary;
     });
-
+    console.log('filteredItems:', filteredItems);
     const getText = (mk: string, en: string) => lang === 'mk' ? mk : en;
 
     return (
@@ -356,18 +498,12 @@ export default function MenuPageClient({ initialMenuItems, categories }: MenuPag
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     {getText('Категорија', 'Category')}
                                 </label>
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full p-3 border rounded-xl bg-white text-lg"
-                                >
-                                    <option value="">{getText('Сите категории', 'All categories')}</option>
-                                    {categories.map((category) => (
-                                        <option key={category._id} value={category.slug}>
-                                            {lang === 'mk' ? category.nameMK : category.nameEN}
-                                        </option>
-                                    ))}
-                                </select>
+                                <FilterSection
+                                    categories={categories}
+                                    selectedCategory={selectedCategory}
+                                    setSelectedCategory={setSelectedCategory}
+                                    lang={lang}
+                                />
                             </div>
 
                             {/* Price Range Filter */}
