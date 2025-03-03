@@ -1,5 +1,3 @@
-import mongoose from 'mongoose';
-
 declare global {
     let mongoose: {
         conn: typeof mongoose | null;

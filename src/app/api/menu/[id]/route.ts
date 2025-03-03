@@ -94,7 +94,7 @@ export async function DELETE(
         // If there's an image, attempt to delete it from Cloudinary
         if (menuItem.imagePublicId) {
             try {
-                await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/upload/${menuItem.imagePublicId}`, {
+                await fetch(`/api/upload/${menuItem.imagePublicId}`, {
                     method: 'DELETE',
                 });
             } catch (error) {

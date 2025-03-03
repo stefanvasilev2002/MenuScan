@@ -1,4 +1,3 @@
-// app/dashboard/menus/[menuId]/items/CategoriesPage.tsx
 import { cookies } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth';
 import { Menu } from '@/models/Menu';

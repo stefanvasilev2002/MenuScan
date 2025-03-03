@@ -1,6 +1,6 @@
 // components/dashboard/MenuItemsManager.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface MenuItem {
@@ -89,7 +89,7 @@ export function MenuItemsManager({ menuId, menuName, userId }: MenuItemsManagerP
         }
 
         try {
-            const response = await fetch(`/api/menus/${menuId}/items/${id}`, {
+            const response = await fetch(`/api/menu/${id}`, {
                 method: 'DELETE',
             });
 
@@ -152,6 +152,12 @@ export function MenuItemsManager({ menuId, menuName, userId }: MenuItemsManagerP
                 </div>
                 <div className="flex space-x-4">
                     <Link
+                        href={menuId ? `/dashboard/menu/${menuId}/qr` : '/dashboard'}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
+                        <span className="mr-2">📱</span>
+                        QR Код
+                    </Link>
+                    <Link
                         href={`/dashboard/menus/${menuId}/categories`}
                         className="bg-white hover:bg-gray-50 text-gray-800 px-4 py-2 rounded-lg border"
                     >
@@ -159,8 +165,7 @@ export function MenuItemsManager({ menuId, menuName, userId }: MenuItemsManagerP
                     </Link>
                     <Link
                         href={`/dashboard/menus/${menuId}/items/new`}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center"
-                    >
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
                         <span className="mr-2">+</span>
                         Add Item
                     </Link>

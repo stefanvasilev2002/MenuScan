@@ -1,7 +1,7 @@
 //api/categories/[id]/route.ts
 import { connectToDatabase } from '@/lib/db';
 import { Category } from '@/models/Category';
-import { NextResponse } from 'next/server';
+import {NextRequest, NextResponse} from 'next/server';
 import {MenuItem} from "@/models/MenuItem";
 function slugify(text: string): string {
     // Transliteration map for Cyrillic to Latin
@@ -37,7 +37,7 @@ function slugify(text: string): string {
 }
 
 export async function DELETE(
-    request: Request,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -110,7 +110,7 @@ export async function DELETE(
     }
 }
 export async function PUT(
-    request: Request,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -174,7 +174,7 @@ export async function PUT(
 }
 
 export async function GET(
-    request: Request,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {

@@ -63,22 +63,30 @@ export default function EditItemPage({ params }: { params: PageParams }) {
     const [isLoading, setIsLoading] = useState(true);
 
     // Recursive function to flatten categories for select options
-    const flattenCategories = (cats: Category[], level = 0): JSX.Element[] => {
+    const flattenCategories = (cats: Category[] | undefined | null, level = 0): JSX.Element[] => {
+        if (!cats || !Array.isArray(cats)) {
+            return [];
+        }
+
         return cats.reduce((acc: JSX.Element[], cat) => {
+            if (!cat || typeof cat !== 'object') {
+                return acc;
+            }
+
             // Add padding based on level for visual hierarchy
             const padding = '\u00A0'.repeat(level * 4);
             acc.push(
                 <option key={cat.slug} value={cat.slug}>
-                    {padding}{cat.nameMK}
+                    {padding}{cat.nameMK || ''}
                 </option>
             );
-            if (cat.children && cat.children.length > 0) {
+
+            if (cat.children && Array.isArray(cat.children) && cat.children.length > 0) {
                 acc.push(...flattenCategories(cat.children, level + 1));
             }
             return acc;
         }, []);
     };
-
     useEffect(() => {
         const fetchData = async () => {
             try {

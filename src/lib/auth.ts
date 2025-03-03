@@ -2,6 +2,8 @@ import { jwtVerify } from 'jose';
 import { User } from '@/models/User';
 import { connectToDatabase } from './db';
 
+import jwt from "jsonwebtoken";
+
 export async function getCurrentUser(token: string) {
     try {
         if (!process.env.JWT_SECRET) {
@@ -33,8 +35,6 @@ export async function generateToken(userId: string) {
     if (!process.env.JWT_SECRET) {
         throw new Error('JWT_SECRET is not defined');
     }
-
-    const jwt = require('jsonwebtoken');
     return jwt.sign(
         { userId },
         process.env.JWT_SECRET,

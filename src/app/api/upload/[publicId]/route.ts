@@ -12,7 +12,8 @@ export async function DELETE(
     { params }: { params: { publicId: string } }
 ) {
     try {
-        await cloudinary.uploader.destroy(params.publicId);
+        const aa = await cloudinary.uploader.destroy(params.publicId);
+        console.log('image delete', aa);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Delete error:', error);
