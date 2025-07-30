@@ -3,7 +3,7 @@ import mongoose, { Schema } from 'mongoose';
 
 interface IMenu {
     name: string;
-    userId: string;
+    restaurantId: string;
     isActive: boolean;
     qrCodeUrl?: string;
     theme: string;
@@ -27,10 +27,10 @@ const MenuSchema = new Schema<IMenu>({
         type: String,
         required: [true, 'Menu name is required'],
     },
-    userId: {
+    restaurantId: {
         type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'User ID is required'],
+        ref: 'Restaurant',
+        required: [true, 'Restaurant ID is required'],
     },
     isActive: {
         type: Boolean,

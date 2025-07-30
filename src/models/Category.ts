@@ -1,34 +1,26 @@
 import mongoose from 'mongoose';
+
 const CategorySchema = new mongoose.Schema({
-    menuId: {
+    restaurantId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Menu',
+        ref: 'Restaurant',
         required: true,
     },
-    nameMK: {
+    name: {
         type: String,
         required: true,
     },
-    nameEN: {
+    description: {
         type: String,
-        required: true,
-    },
-    slug: {
-        type: String,
-        required: true,
+        default: '',
     },
     order: {
         type: Number,
         default: 0,
     },
-    parentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-        default: null,
-    },
     icon: {
         type: String,
-        default: '📋',
+        default: '🍽️',
     },
     color: {
         type: String,
@@ -40,16 +32,9 @@ const CategorySchema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
-    strictPopulate: false,
 });
 
-CategorySchema.virtual('children', {
-    ref: 'Category',
-    localField: '_id',
-    foreignField: 'parentId',
-});
-
-CategorySchema.set('toJSON', { virtuals: true });
-CategorySchema.set('toObject', { virtuals: true });
+// Create a compound index for restaurantId and name to ensure unique names per restaurant
+CategorySchema.index({ restaurantId: 1, name: 1 }, { unique: true });
 
 export const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);

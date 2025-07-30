@@ -4,11 +4,11 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // Routes that require authentication
-const PROTECTED_ROUTES = ['/dashboard'];
+const PROTECTED_ROUTES = ['/dashboard', '/api/restaurant'];
 // Routes that are public (including the landing page)
 const PUBLIC_ROUTES = ['/login', '/register', '/', '/menu'];
 // Special routes that don't need ownership verification
-const SPECIAL_ROUTES = ['/dashboard/menu/new'];
+const SPECIAL_ROUTES = ['/dashboard/menu/new', '/dashboard'];
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -24,6 +24,10 @@ export async function middleware(request: NextRequest) {
         const authToken = request.cookies.get('auth_token');
 
         if (!authToken?.value) {
+            // For API routes, return 401 instead of redirecting
+            if (pathname.startsWith('/api/')) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
             const url = new URL('/login', request.url);
             url.searchParams.set('from', pathname);
             return NextResponse.redirect(url);
@@ -33,11 +37,25 @@ export async function middleware(request: NextRequest) {
             const JWT_SECRET = process.env.JWT_SECRET;
             if (!JWT_SECRET) {
                 console.error('JWT_SECRET is not defined');
+                if (pathname.startsWith('/api/')) {
+                    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+                }
                 return NextResponse.redirect(new URL('/login', request.url));
             }
 
             const secret = new TextEncoder().encode(JWT_SECRET);
             const { payload } = await jwtVerify(authToken.value, secret);
+
+            // For API routes, just add the user ID header and continue
+            if (pathname.startsWith('/api/')) {
+                const requestHeaders = new Headers(request.headers);
+                requestHeaders.set('x-user-id', payload.userId as string);
+                return NextResponse.next({
+                    request: {
+                        headers: requestHeaders,
+                    }
+                });
+            }
 
             // Skip ownership verification for special routes
             if (SPECIAL_ROUTES.some(route => pathname.startsWith(route))) {
@@ -50,13 +68,24 @@ export async function middleware(request: NextRequest) {
                 });
             }
 
-            // For menu-specific routes, verify ownership
-            const menuIdMatch = pathname.match(/\/dashboard\/menu\/([^\/]+)/);
-            if (menuIdMatch && !SPECIAL_ROUTES.includes(pathname)) {
-                const menuId = menuIdMatch[1];
+            // For restaurant-specific routes, verify ownership
+            const restaurantSlugMatch = pathname.match(/\/dashboard\/([^\/]+)/);
+            if (restaurantSlugMatch && !SPECIAL_ROUTES.includes(pathname)) {
+                const restaurantSlug = restaurantSlugMatch[1];
+                // Skip verification for the main dashboard route
+                if (restaurantSlug === 'dashboard') {
+                    const requestHeaders = new Headers(request.headers);
+                    requestHeaders.set('x-user-id', payload.userId as string);
+                    return NextResponse.next({
+                        request: {
+                            headers: requestHeaders,
+                        }
+                    });
+                }
+                
                 try {
                     const verifyResponse = await fetch(
-                        `${request.nextUrl.origin}/api/menus/${menuId}/verify-ownership`,
+                        `${request.nextUrl.origin}/api/restaurant/${restaurantSlug}/verify-ownership`,
                         {
                             headers: {
                                 Cookie: `auth_token=${authToken.value}`
@@ -68,7 +97,7 @@ export async function middleware(request: NextRequest) {
                         return NextResponse.redirect(new URL('/dashboard', request.url));
                     }
                 } catch (error) {
-                    console.error('Error verifying menu ownership:', error);
+                    console.error('Error verifying restaurant ownership:', error);
                     return NextResponse.redirect(new URL('/dashboard', request.url));
                 }
             }
@@ -84,6 +113,9 @@ export async function middleware(request: NextRequest) {
             });
         } catch (error) {
             console.error('Token verification failed:', error);
+            if (pathname.startsWith('/api/')) {
+                return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+            }
             const url = new URL('/login', request.url);
             url.searchParams.set('from', pathname);
             return NextResponse.redirect(url);
@@ -97,12 +129,11 @@ export const config = {
     matcher: [
         /*
          * Match all request paths except for the ones starting with:
-         * - api (API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - public folder
          */
-        '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+        '/((?!_next/static|_next/image|favicon.ico|public).*)',
     ],
 };
