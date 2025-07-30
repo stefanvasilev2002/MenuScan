@@ -17,6 +17,19 @@ export default function MenuItemCard({
     onDelete, 
     onToggleAvailability 
 }: MenuItemCardProps) {
+    // Add null check for item
+    if (!item) {
+        return (
+            <div className="bg-white rounded-lg border shadow-sm p-4">
+                <div className="animate-pulse">
+                    <div className="h-48 bg-gray-200 rounded-t-lg mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-all ${
             !item.isAvailable ? 'opacity-60' : ''

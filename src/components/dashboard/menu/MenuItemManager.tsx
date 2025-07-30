@@ -121,6 +121,11 @@ export default function MenuItemManager({
         : null;
 
     const sortedMenuItems = [...menuItems].sort((a, b) => a.order - b.order);
+    
+    // Debug logging
+    console.log('MenuItemManager - menuItems:', menuItems);
+    console.log('MenuItemManager - sortedMenuItems:', sortedMenuItems);
+    console.log('MenuItemManager - selectedCategory:', selectedCategory);
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -219,11 +224,11 @@ export default function MenuItemManager({
                             {sortedMenuItems.map((item) => (
                                 <MenuItemCard
                                     key={item._id}
-                                    menuItem={item}
+                                    item={item}
                                     category={categories.find(cat => cat._id === item.categoryId)}
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}
-                                    onToggleAvailability={(isAvailable) => handleToggleAvailability(item._id, isAvailable)}
+                                    onToggleAvailability={() => handleToggleAvailability(item._id, !item.isAvailable)}
                                 />
                             ))}
                         </div>
