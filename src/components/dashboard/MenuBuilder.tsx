@@ -74,9 +74,12 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
         setCategories(updated);
     };
 
-    const handleMenuItemsReordered = (updated: MenuItem[]) => {
+    const handleMenuItemsChanged = (updated: MenuItem[]) => {
         const byId = new Map(updated.map(item => [item._id, item]));
-        setMenuItems(prev => prev.map(item => byId.get(item._id) ?? item));
+        setMenuItems(prev => {
+            const known = new Set(prev.map(item => item._id));
+            return [...prev.map(item => byId.get(item._id) ?? item), ...updated.filter(item => !known.has(item._id))];
+        });
     };
 
     const handleMenuItemDeleted = (itemId: string) => {
@@ -176,7 +179,7 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
                         onMenuItemCreated={handleMenuItemCreated}
                         onMenuItemUpdated={handleMenuItemUpdated}
                         onMenuItemDeleted={handleMenuItemDeleted}
-                        onMenuItemsReordered={handleMenuItemsReordered}
+                        onMenuItemsChanged={handleMenuItemsChanged}
                     />
                 </div>
             </div>

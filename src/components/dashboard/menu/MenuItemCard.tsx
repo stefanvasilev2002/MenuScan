@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { Copy } from 'lucide-react';
 import { Category, MenuItem } from '@/types/menu';
 import { availabilityOf, type AvailabilityStatus } from '@/lib/availability';
 import AvailabilityControl from './AvailabilityControl';
@@ -15,6 +16,7 @@ interface MenuItemCardProps {
     category?: Category;
     onEdit: () => void;
     onDelete: () => void;
+    onDuplicate?: () => void;
     onAvailabilityChange: (status: AvailabilityStatus) => void;
     canMoveUp?: boolean;
     canMoveDown?: boolean;
@@ -27,6 +29,7 @@ export default function MenuItemCard({
     category, 
     onEdit, 
     onDelete, 
+    onDuplicate,
     onAvailabilityChange,
     canMoveUp = false,
     canMoveDown = false,
@@ -77,6 +80,17 @@ export default function MenuItemCard({
                         </svg>
                     </button>
                     
+                    {onDuplicate && (
+                        <button
+                            onClick={onDuplicate}
+                            aria-label={`Duplicate ${item.name}`}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            title="Duplicate item"
+                        >
+                            <Copy className="w-4 h-4" />
+                        </button>
+                    )}
+
                     <button
                         onClick={onDelete}
                         aria-label={`Delete ${item.name}`}

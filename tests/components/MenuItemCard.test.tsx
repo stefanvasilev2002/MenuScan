@@ -63,6 +63,34 @@ describe('MenuItemCard availability control', () => {
         expect(onMove).toHaveBeenCalledWith('down');
     });
 
+    it('offers a duplicate action when provided', async () => {
+        const onDuplicate = vi.fn();
+        render(
+            <MenuItemCard
+                item={baseItem}
+                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                onDuplicate={onDuplicate}
+                onAvailabilityChange={vi.fn()}
+            />,
+        );
+        await userEvent.click(screen.getByRole('button', { name: 'Duplicate Burek' }));
+        expect(onDuplicate).toHaveBeenCalledTimes(1);
+    });
+
+    it('formats the price in the restaurant currency', () => {
+        render(
+            <MenuItemCard
+                item={baseItem}
+                currency="EUR"
+                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                onAvailabilityChange={vi.fn()}
+            />,
+        );
+        expect(screen.getByText('€120.00')).toBeInTheDocument();
+    });
+
     it('hides move buttons when reordering is not available', () => {
         renderCard();
         expect(screen.queryByRole('button', { name: /move burek/i })).not.toBeInTheDocument();

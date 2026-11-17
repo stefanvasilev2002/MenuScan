@@ -19,7 +19,7 @@ interface MenuItemManagerProps {
     onMenuItemCreated: (item: MenuItem) => void;
     onMenuItemUpdated: (item: MenuItem) => void;
     onMenuItemDeleted: (itemId: string) => void;
-    onMenuItemsReordered: (items: MenuItem[]) => void;
+    onMenuItemsChanged: (items: MenuItem[]) => void;
 }
 
 export default function MenuItemManager({
@@ -31,7 +31,7 @@ export default function MenuItemManager({
     onMenuItemCreated,
     onMenuItemUpdated,
     onMenuItemDeleted,
-    onMenuItemsReordered
+    onMenuItemsChanged
 }: MenuItemManagerProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -57,6 +57,13 @@ export default function MenuItemManager({
         const updatedItem = await apiRequest<MenuItem>(`${baseUrl}/${itemId}`, { method: 'PUT', body: JSON.stringify(data) });
         onMenuItemUpdated(updatedItem);
         setEditingItem(null);
+    });
+
+    const handleDuplicateMenuItem = (itemId: string) => run(async () => {
+        const { items } = await apiRequest<{ item: MenuItem; items: MenuItem[] }>(`${baseUrl}/${itemId}/duplicate`, {
+            method: 'POST',
+        });
+        onMenuItemsChanged(items);
     });
 
     const handleDeleteMenuItem = (itemId: string) => {
@@ -94,7 +101,7 @@ export default function MenuItemManager({
                 method: 'PUT',
                 body: JSON.stringify({ categoryId: selectedCategory, orderedIds }),
             });
-            onMenuItemsReordered(updated);
+            onMenuItemsChanged(updated);
         });
     };
 
@@ -210,6 +217,7 @@ export default function MenuItemManager({
                                     category={categories.find(cat => cat._id === item.categoryId)}
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}
+                                    onDuplicate={() => handleDuplicateMenuItem(item._id)}
                                     onAvailabilityChange={(status) => handleAvailabilityChange(item._id, status)}
                                     canMoveUp={sortedIds[0] !== item._id}
                                     canMoveDown={sortedIds.at(-1) !== item._id}
