@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Category, CreateCategoryData, UpdateCategoryData } from '@/types/menu';
+import { useState } from 'react';
+import { Category } from '@/types/menu';
+import { categoryCreateSchema, fieldErrors, type CategoryCreateInput } from '@/lib/validation';
 
 interface CategoryFormProps {
     category?: Category;
-    onSubmit: (data: CreateCategoryData | UpdateCategoryData) => void;
+    onSubmit: (data: CategoryCreateInput) => void;
     onCancel: () => void;
     submitLabel: string;
 }
@@ -43,33 +44,15 @@ export default function CategoryForm({ category, onSubmit, onCancel, submitLabel
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = 'Category name is required';
-        }
-
-        if (formData.name.length > 50) {
-            newErrors.name = 'Category name must be less than 50 characters';
-        }
-
-        if (formData.description && formData.description.length > 200) {
-            newErrors.description = 'Description must be less than 200 characters';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
+        const parsed = categoryCreateSchema.safeParse(formData);
+        if (!parsed.success) {
+            setErrors(fieldErrors(parsed.error));
             return;
         }
-
-        onSubmit(formData);
+        setErrors({});
+        onSubmit(parsed.data);
     };
 
     const handleInputChange = (field: string, value: string | boolean) => {

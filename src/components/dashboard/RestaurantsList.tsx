@@ -16,12 +16,11 @@ import {
     AlertCircle,
     Sparkles
 } from 'lucide-react';
-import { Restaurant } from '@/models/Restaurant';
-import { User } from '@/models/User';
+import type { RestaurantData, UserData } from '@/types/restaurant';
 
 interface RestaurantsListProps {
-    restaurants: Restaurant[];
-    user: User;
+    restaurants: RestaurantData[];
+    user: UserData;
 }
 
 export default function RestaurantsList({ restaurants, user }: RestaurantsListProps) {
@@ -283,7 +282,7 @@ export default function RestaurantsList({ restaurants, user }: RestaurantsListPr
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900 mb-2">No restaurants yet</h3>
                         <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-                            Get started by creating your first restaurant above. You'll be able to build menus, generate QR codes, and manage orders.
+                            Get started by creating your first restaurant above. You&apos;ll be able to build menus, generate QR codes, and manage orders.
                         </p>
                         <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
                             <div className="flex items-center">

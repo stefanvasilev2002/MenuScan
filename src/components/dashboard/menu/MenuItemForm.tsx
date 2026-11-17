@@ -1,97 +1,67 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Category, MenuItem, CreateMenuItemData, UpdateMenuItemData } from '@/types/menu';
+import { useState } from 'react';
+import { Category, MenuItem } from '@/types/menu';
 import ImageUpload from '@/components/image/ImageUpload';
+import { fieldErrors, menuItemCreateSchema, type MenuItemCreateInput } from '@/lib/validation';
 
 interface MenuItemFormProps {
     item?: MenuItem;
     categories: Category[];
     selectedCategoryId?: string | null;
-    onSubmit: (data: CreateMenuItemData | UpdateMenuItemData) => void;
+    onSubmit: (data: MenuItemCreateInput) => Promise<void>;
     onCancel: () => void;
     submitLabel: string;
 }
 
 const ALLERGEN_OPTIONS = [
-    'Gluten', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts', 
+    'Gluten', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts',
     'Peanuts', 'Soybeans', 'Wheat', 'Sesame', 'Sulfites'
 ];
 
-export default function MenuItemForm({ 
-    item, 
-    categories, 
+export default function MenuItemForm({
+    item,
+    categories,
     selectedCategoryId,
-    onSubmit, 
-    onCancel, 
-    submitLabel 
+    onSubmit,
+    onCancel,
+    submitLabel
 }: MenuItemFormProps) {
     const [formData, setFormData] = useState({
-        name: item?.name || '',
-        description: item?.description || '',
-        price: item?.price || '',
-        categoryId: item?.categoryId || selectedCategoryId || '',
-        imageUrl: item?.imageUrl || '',
-        imagePublicId: item?.imagePublicId || '',
+        name: item?.name ?? '',
+        description: item?.description ?? '',
+        price: item?.price !== undefined ? String(item.price) : '',
+        categoryId: item?.categoryId ?? selectedCategoryId ?? '',
+        imageUrl: item?.imageUrl ?? '',
+        imagePublicId: item?.imagePublicId ?? '',
         isAvailable: item?.isAvailable ?? true,
-        isVegetarian: item?.isVegetarian || false,
-        isVegan: item?.isVegan || false,
-        isSpicy: item?.isSpicy || false,
-        allergens: item?.allergens || [],
-        ingredients: item?.ingredients || [],
-        preparationTime: item?.preparationTime || ''
+        isVegetarian: item?.isVegetarian ?? false,
+        isVegan: item?.isVegan ?? false,
+        isSpicy: item?.isSpicy ?? false,
+        allergens: item?.allergens ?? [],
+        ingredients: item?.ingredients ?? [],
+        preparationTime: item?.preparationTime ? String(item.preparationTime) : ''
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = 'Item name is required';
-        }
-
-        if (formData.name.length > 100) {
-            newErrors.name = 'Item name must be less than 100 characters';
-        }
-
-        if (!formData.price || parseFloat(formData.price) <= 0) {
-            newErrors.price = 'Valid price is required';
-        }
-
-        if (!formData.categoryId) {
-            newErrors.categoryId = 'Category is required';
-        }
-
-        if (formData.description && formData.description.length > 500) {
-            newErrors.description = 'Description must be less than 500 characters';
-        }
-
-        if (formData.preparationTime && (parseInt(formData.preparationTime) < 1 || parseInt(formData.preparationTime) > 480)) {
-            newErrors.preparationTime = 'Preparation time must be between 1 and 480 minutes';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
+
+        const parsed = menuItemCreateSchema.safeParse({
+            ...formData,
+            price: formData.price === '' ? undefined : formData.price,
+            preparationTime: formData.preparationTime === '' ? null : formData.preparationTime,
+        });
+        if (!parsed.success) {
+            setErrors(fieldErrors(parsed.error));
             return;
         }
 
+        setErrors({});
         setIsSubmitting(true);
         try {
-            const submitData = {
-                ...formData,
-                price: parseFloat(formData.price),
-                preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined
-            };
-            await onSubmit(submitData);
-        } catch (error) {
-            console.error('Error submitting form:', error);
+            await onSubmit(parsed.data);
         } finally {
             setIsSubmitting(false);
         }
@@ -254,9 +224,13 @@ export default function MenuItemForm({
                         </label>
                         <ImageUpload
                             currentImageUrl={formData.imageUrl}
+                            currentImagePublicId={formData.imagePublicId}
                             onImageUpload={handleImageUpload}
-                            folder="menu-items"
+                            onError={(message) => setErrors(prev => ({ ...prev, imageUrl: message }))}
                         />
+                        {errors.imageUrl && (
+                            <p className="mt-1 text-sm text-red-600">{errors.imageUrl}</p>
+                        )}
                     </div>
 
                     {/* Dietary Options */}
@@ -341,7 +315,7 @@ export default function MenuItemForm({
                             type="text"
                             placeholder="Add an ingredient..."
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
                                     handleIngredientAdd(e.currentTarget.value);

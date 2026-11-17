@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Category, MenuItem } from '@/types/menu';
 
 interface MenuItemCardProps {
@@ -37,10 +38,12 @@ export default function MenuItemCard({
             {/* Image */}
             <div className="relative h-48 bg-gray-200 rounded-t-lg overflow-hidden">
                 {item.imageUrl ? (
-                    <img
+                    <Image
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                        className="object-cover"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">

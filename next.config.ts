@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     images: {
-        domains: ['res.cloudinary.com'],
         remotePatterns: [
             {
                 protocol: 'https',
@@ -10,12 +9,6 @@ const nextConfig: NextConfig = {
                 pathname: '/**',
             },
         ],
-    },
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
-    typescript: {
-        ignoreBuildErrors: true,
     },
 };
 

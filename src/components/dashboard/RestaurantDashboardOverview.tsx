@@ -14,7 +14,6 @@ import {
     DollarSign,
     Users,
     QrCode,
-    Sparkles,
     ArrowRight,
     Calendar,
     Star
@@ -155,7 +154,7 @@ export default function RestaurantDashboardOverview({ restaurantSlug }: Restaura
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div>
                     <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
-                    <p className="text-lg text-gray-600">Monitor your restaurant's performance and track key metrics</p>
+                    <p className="text-lg text-gray-600">Monitor your restaurant&apos;s performance and track key metrics</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                     <Link
@@ -185,7 +184,7 @@ export default function RestaurantDashboardOverview({ restaurantSlug }: Restaura
                         <TrendingUp className="h-5 w-5 text-green-500" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-gray-600 mb-1">Today's Revenue</p>
+                        <p className="text-sm font-medium text-gray-600 mb-1">Today&apos;s Revenue</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900">
                             {stats.todayRevenue.toLocaleString('mk-MK', {
                                 style: 'currency',

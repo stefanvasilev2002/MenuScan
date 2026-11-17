@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 
@@ -28,7 +30,7 @@ export const EmojiPicker = ({ onEmojiSelect, currentEmoji }: EmojiPickerProps) =
                     />
                     <Picker
                         data={data}
-                        onEmojiSelect={(emoji: any) => {
+                        onEmojiSelect={(emoji: { native: string }) => {
                             onEmojiSelect(emoji.native);
                             setShowPicker(false);
                         }}

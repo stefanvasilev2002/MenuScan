@@ -1,32 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import type { RestaurantData } from '@/types/restaurant';
+import { useCallback, useEffect, useState } from 'react';
+import { apiRequest, errorMessage } from '@/lib/client-api';
 import CategoryManager from './menu/CategoryManager';
 import MenuItemManager from './menu/MenuItemManager';
 import { Category, MenuItem } from '@/types/menu';
 
-interface RestaurantData {
-    _id: string;
-    name: string;
-    slug: string;
-    userId: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    logo?: string;
-    isActive: boolean;
-    settings: {
-        currency: string;
-        timezone: string;
-        orderNumberPrefix: string;
-        autoAcceptOrders: boolean;
-        takeoutEnabled: boolean;
-        deliveryEnabled: boolean;
-    };
-    createdAt: Date;
-    updatedAt: Date;
-}
 
 interface MenuBuilderProps {
     restaurant: RestaurantData;
@@ -39,35 +19,26 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchMenuData();
-    }, [restaurant._id]);
-
-    const fetchMenuData = async () => {
+    const fetchMenuData = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
         try {
-            setIsLoading(true);
-            setError(null);
-
-            const categoriesResponse = await fetch(`/api/restaurant/${restaurant.slug}/categories`);
-            if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
-            const categoriesData = await categoriesResponse.json();
-
-            const itemsResponse = await fetch(`/api/restaurant/${restaurant.slug}/menu-items`);
-            if (!itemsResponse.ok) throw new Error('Failed to fetch menu items');
-            const itemsData = await itemsResponse.json();
-
-            console.log('Fetched categories:', categoriesData);
-            console.log('Fetched menu items:', itemsData);
-
+            const [categoriesData, itemsData] = await Promise.all([
+                apiRequest<Category[]>(`/api/restaurant/${restaurant.slug}/categories`),
+                apiRequest<MenuItem[]>(`/api/restaurant/${restaurant.slug}/menu-items`),
+            ]);
             setCategories(categoriesData);
             setMenuItems(itemsData);
         } catch (err) {
-            console.error('Error fetching menu data:', err);
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setError(errorMessage(err));
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [restaurant.slug]);
+
+    useEffect(() => {
+        fetchMenuData();
+    }, [fetchMenuData]);
 
     const handleCategoryCreated = (newCategory: Category) => {
         setCategories(prev => [...prev, newCategory]);

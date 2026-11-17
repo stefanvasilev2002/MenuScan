@@ -12,9 +12,7 @@ import {
     ArrowLeft,
     CheckCircle,
     AlertCircle,
-    Star,
-    Users,
-    Zap
+    Star
 } from 'lucide-react';
 
 const translations = {

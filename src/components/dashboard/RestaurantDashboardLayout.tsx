@@ -1,20 +1,16 @@
 'use client';
 
+import type { RestaurantData } from '@/types/restaurant';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
     Utensils,
-    ShoppingCart,
-    BarChart3,
-    Settings,
     LogOut,
-    Plus,
     Menu as MenuIcon,
     Building2,
     QrCode,
-    Users,
     Bell,
     Search,
     ChevronDown,
@@ -22,28 +18,6 @@ import {
     ArrowLeft
 } from 'lucide-react';
 
-interface RestaurantData {
-    _id: string;
-    name: string;
-    slug: string;
-    userId: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    logo?: string;
-    isActive: boolean;
-    settings: {
-        currency: string;
-        timezone: string;
-        orderNumberPrefix: string;
-        autoAcceptOrders: boolean;
-        takeoutEnabled: boolean;
-        deliveryEnabled: boolean;
-    };
-    createdAt: Date;
-    updatedAt: Date;
-}
 
 interface RestaurantDashboardLayoutProps {
     children: React.ReactNode;
@@ -53,11 +27,7 @@ interface RestaurantDashboardLayoutProps {
 const navigation = [
     { name: 'Overview', href: '', icon: LayoutDashboard },
     { name: 'Menu Builder', href: '/menu', icon: Utensils },
-    { name: 'QR Codes', href: '/qr', icon: QrCode },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Team', href: '/team', icon: Users },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'QR Code', href: '/qr', icon: QrCode },
 ];
 
 export default function RestaurantDashboardLayout({ children, restaurant }: RestaurantDashboardLayoutProps) {

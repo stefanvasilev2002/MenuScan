@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Category, CreateCategoryData, UpdateCategoryData } from '@/types/menu';
+import { Category } from '@/types/menu';
+import { apiRequest, errorMessage } from '@/lib/client-api';
+import type { CategoryCreateInput } from '@/lib/validation';
 import CategoryForm from './CategoryForm';
 import CategoryItem from './CategoryItem';
 
@@ -26,72 +28,41 @@ export default function CategoryManager({
 }: CategoryManagerProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const baseUrl = `/api/restaurant/${restaurantSlug}/categories`;
 
-    const handleCreateCategory = async (data: CreateCategoryData) => {
+    const run = async (action: () => Promise<void>) => {
+        setError(null);
         try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/categories`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create category');
-            }
-
-            const newCategory = await response.json();
-            onCategoryCreated(newCategory);
-            setIsCreating(false);
-        } catch (error) {
-            console.error('Error creating category:', error);
-            alert('Failed to create category. Please try again.');
+            await action();
+        } catch (err) {
+            setError(errorMessage(err));
         }
     };
 
-    const handleUpdateCategory = async (categoryId: string, data: UpdateCategoryData) => {
-        try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/categories/${categoryId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
+    const handleCreateCategory = (data: CategoryCreateInput) => run(async () => {
+        const newCategory = await apiRequest<Category>(baseUrl, { method: 'POST', body: JSON.stringify(data) });
+        onCategoryCreated(newCategory);
+        setIsCreating(false);
+    });
 
-            if (!response.ok) {
-                throw new Error('Failed to update category');
-            }
+    const handleUpdateCategory = (categoryId: string, data: CategoryCreateInput) => run(async () => {
+        const updatedCategory = await apiRequest<Category>(`${baseUrl}/${categoryId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+        onCategoryUpdated(updatedCategory);
+        setEditingCategory(null);
+    });
 
-            const updatedCategory = await response.json();
-            onCategoryUpdated(updatedCategory);
-            setEditingCategory(null);
-        } catch (error) {
-            console.error('Error updating category:', error);
-            alert('Failed to update category. Please try again.');
-        }
-    };
-
-    const handleDeleteCategory = async (categoryId: string) => {
+    const handleDeleteCategory = (categoryId: string) => {
         if (!confirm('Are you sure you want to delete this category? All menu items in this category will also be deleted.')) {
             return;
         }
-
-        try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/categories/${categoryId}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete category');
-            }
-
+        return run(async () => {
+            await apiRequest(`${baseUrl}/${categoryId}`, { method: 'DELETE' });
             onCategoryDeleted(categoryId);
-        } catch (error) {
-            console.error('Error deleting category:', error);
-            alert('Failed to delete category. Please try again.');
-        }
+        });
     };
 
     const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
@@ -119,6 +90,12 @@ export default function CategoryManager({
 
             {/* Content */}
             <div className="p-6">
+                {error && (
+                    <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
                 {isCreating && (
                     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <CategoryForm
@@ -132,6 +109,7 @@ export default function CategoryManager({
                 {editingCategory && (
                     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <CategoryForm
+                            key={editingCategory._id}
                             category={editingCategory}
                             onSubmit={(data) => handleUpdateCategory(editingCategory._id, data)}
                             onCancel={() => setEditingCategory(null)}
