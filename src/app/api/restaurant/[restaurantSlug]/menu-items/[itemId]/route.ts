@@ -1,121 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { Restaurant } from '@/models/Restaurant';
-import { MenuItem } from '@/models/MenuItem';
+import { NextResponse } from 'next/server';
+import { badRequest, notFound, parseJson, requireOwnedRestaurant, route } from '@/lib/api';
+import { menuItemUpdateSchema, objectIdSchema } from '@/lib/validation';
 import { Category } from '@/models/Category';
-import { connectToDatabase } from '@/lib/db';
+import { MenuItem } from '@/models/MenuItem';
 
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ restaurantSlug: string; itemId: string }> }
-) {
-    try {
-        const { restaurantSlug, itemId } = await params;
-        const body = await request.json();
-        
-        // Get user from headers (set by middleware)
-        const userId = request.headers.get('x-user-id');
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+type Params = { restaurantSlug: string; itemId: string };
 
-        await connectToDatabase();
-
-        // Verify restaurant ownership
-        const restaurant = await Restaurant.findOne({ 
-            slug: restaurantSlug, 
-            userId 
-        });
-
-        if (!restaurant) {
-            return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
-        }
-
-        // Find the menu item and verify it belongs to this restaurant
-        const menuItem = await MenuItem.findOne({
-            _id: itemId,
-            restaurantId: restaurant._id
-        });
-
-        if (!menuItem) {
-            return NextResponse.json({ error: 'Menu item not found' }, { status: 404 });
-        }
-
-        // Update menu item
-        const updatedMenuItem = await MenuItem.findByIdAndUpdate(
-            itemId,
-            {
-                name: body.name?.trim(),
-                description: body.description?.trim(),
-                price: body.price,
-                categoryId: body.categoryId,
-                imageUrl: body.imageUrl,
-                imagePublicId: body.imagePublicId,
-                isAvailable: body.isAvailable,
-                isVegetarian: body.isVegetarian,
-                isVegan: body.isVegan,
-                isSpicy: body.isSpicy,
-                allergens: body.allergens,
-                ingredients: body.ingredients,
-                preparationTime: body.preparationTime,
-                order: body.order
-            },
-            { new: true, runValidators: true }
-        );
-
-        return NextResponse.json(updatedMenuItem);
-    } catch (error) {
-        console.error('Error updating menu item:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+async function findOwnedItem(restaurantId: unknown, itemId: string) {
+    if (!objectIdSchema.safeParse(itemId).success) {
+        throw notFound('Menu item not found');
     }
+    const item = await MenuItem.findOne({ _id: itemId, restaurantId });
+    if (!item) {
+        throw notFound('Menu item not found');
+    }
+    return item;
 }
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ restaurantSlug: string; itemId: string }> }
-) {
-    try {
-        const { restaurantSlug, itemId } = await params;
-        
-        // Get user from headers (set by middleware)
-        const userId = request.headers.get('x-user-id');
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const PUT = route<Params>(async (request, { restaurantSlug, itemId }) => {
+    const { restaurant } = await requireOwnedRestaurant(request, restaurantSlug);
+    const item = await findOwnedItem(restaurant._id, itemId);
+    const input = await parseJson(request, menuItemUpdateSchema);
+
+    if (input.categoryId && input.categoryId !== String(item.categoryId)) {
+        const category = await Category.exists({ _id: input.categoryId, restaurantId: restaurant._id });
+        if (!category) {
+            throw badRequest('Validation failed', { categoryId: 'Category not found' });
         }
-
-        await connectToDatabase();
-
-        // Verify restaurant ownership
-        const restaurant = await Restaurant.findOne({ 
-            slug: restaurantSlug, 
-            userId 
-        });
-
-        if (!restaurant) {
-            return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
-        }
-
-        // Find the menu item and verify it belongs to this restaurant
-        const menuItem = await MenuItem.findOne({
-            _id: itemId,
-            restaurantId: restaurant._id
-        });
-
-        if (!menuItem) {
-            return NextResponse.json({ error: 'Menu item not found' }, { status: 404 });
-        }
-
-        // Delete the menu item
-        await MenuItem.findByIdAndDelete(itemId);
-
-        return NextResponse.json({ message: 'Menu item deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting menu item:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
     }
-} 
+
+    item.set(input);
+    await item.save();
+    return NextResponse.json(item);
+});
+
+export const DELETE = route<Params>(async (request, { restaurantSlug, itemId }) => {
+    const { restaurant } = await requireOwnedRestaurant(request, restaurantSlug);
+    const item = await findOwnedItem(restaurant._id, itemId);
+    await item.deleteOne();
+    return NextResponse.json({ success: true });
+});

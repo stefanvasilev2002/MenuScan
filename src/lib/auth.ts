@@ -1,34 +1,9 @@
-import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { User } from '@/models/User';
 import { connectToDatabase } from './db';
-import { getJwtSecret } from './env';
+import { verifyToken } from './session';
 
-export const AUTH_COOKIE = 'auth_token';
-export const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-export interface AuthTokenPayload extends JWTPayload {
-    userId: string;
-}
-
-export async function signToken(userId: string): Promise<string> {
-    return new SignJWT({ userId })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime(`${TOKEN_TTL_SECONDS}s`)
-        .sign(getJwtSecret());
-}
-
-export async function verifyToken(token: string): Promise<AuthTokenPayload | null> {
-    try {
-        const { payload } = await jwtVerify(token, getJwtSecret(), { algorithms: ['HS256'] });
-        if (typeof payload.userId !== 'string' || payload.userId === '') {
-            return null;
-        }
-        return payload as AuthTokenPayload;
-    } catch {
-        return null;
-    }
-}
+export { AUTH_COOKIE, TOKEN_TTL_SECONDS, authCookieOptions, signToken, verifyToken } from './session';
+export type { AuthTokenPayload } from './session';
 
 export async function getCurrentUser(token: string | undefined) {
     if (!token) {
@@ -46,11 +21,3 @@ export async function getCurrentUser(token: string | undefined) {
     }
     return user;
 }
-
-export const authCookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: TOKEN_TTL_SECONDS,
-};

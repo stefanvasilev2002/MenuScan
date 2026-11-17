@@ -178,8 +178,10 @@ export default function ImageUpload({
 
             // Delete existing image if there is one
             if (publicId) {
-                await fetch(`/api/upload/${publicId}`, {
+                await fetch('/api/upload', {
                     method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ publicId }),
                 });
             }
 
@@ -212,8 +214,10 @@ export default function ImageUpload({
 
         try {
             setIsUploading(true);
-            await fetch(`/api/upload/${publicId}`, {
+            await fetch('/api/upload', {
                 method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publicId }),
             });
 
             setPreviewUrl(undefined);

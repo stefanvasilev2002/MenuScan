@@ -1,12 +1,9 @@
-const REQUIRED_SERVER_ENV = [
-    'MONGODB_URI',
-    'JWT_SECRET',
-    'CLOUDINARY_CLOUD_NAME',
-    'CLOUDINARY_API_KEY',
-    'CLOUDINARY_API_SECRET',
-] as const;
-
-export type ServerEnvKey = (typeof REQUIRED_SERVER_ENV)[number];
+export type ServerEnvKey =
+    | 'MONGODB_URI'
+    | 'JWT_SECRET'
+    | 'CLOUDINARY_CLOUD_NAME'
+    | 'CLOUDINARY_API_KEY'
+    | 'CLOUDINARY_API_SECRET';
 
 export class MissingEnvError extends Error {
     constructor(name: string) {
