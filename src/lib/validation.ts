@@ -45,10 +45,12 @@ export const categoryCreateSchema = z.object({
     icon: z.string().trim().min(1).max(16).optional().default('🍽️'),
     color: hexColorSchema.optional().default('#3B82F6'),
     isVisible: z.boolean().optional().default(true),
+    parentId: objectIdSchema.nullable().optional().default(null),
 });
 
 export const categoryUpdateSchema = z
     .object({
+        parentId: objectIdSchema.nullable(),
         name: trimmed(50, 'Category name'),
         description: optionalText(200, 'Description'),
         icon: z.string().trim().min(1).max(16),

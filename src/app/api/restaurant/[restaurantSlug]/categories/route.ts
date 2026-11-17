@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { caseInsensitive, conflict, parseJson, requireOwnedRestaurant, route } from '@/lib/api';
+import { assertValidParent } from '@/lib/categories';
 import { categoryCreateSchema } from '@/lib/validation';
 import { Category } from '@/models/Category';
 
@@ -20,7 +21,9 @@ export const POST = route<Params>(async (request, { restaurantSlug }) => {
         throw conflict('A category with this name already exists');
     }
 
-    const last = await Category.findOne({ restaurantId: restaurant._id }).sort({ order: -1 });
+    await assertValidParent(restaurant._id, null, input.parentId);
+
+    const last = await Category.findOne({ restaurantId: restaurant._id, parentId: input.parentId }).sort({ order: -1 });
     const category = await Category.create({
         ...input,
         order: (last?.order ?? 0) + 1,

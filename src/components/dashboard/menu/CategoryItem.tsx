@@ -4,6 +4,7 @@ import { Category } from '@/types/menu';
 
 interface CategoryItemProps {
     category: Category;
+    depth?: number;
     isSelected: boolean;
     onSelect: () => void;
     onEdit: () => void;
@@ -12,6 +13,7 @@ interface CategoryItemProps {
 
 export default function CategoryItem({ 
     category, 
+    depth = 0,
     isSelected, 
     onSelect, 
     onEdit, 
@@ -24,6 +26,7 @@ export default function CategoryItem({
                     ? 'bg-blue-50 border-blue-200 shadow-sm'
                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
             }`}
+            style={{ marginLeft: depth * 20 }}
             onClick={onSelect}
         >
             <div className="flex items-center space-x-3">

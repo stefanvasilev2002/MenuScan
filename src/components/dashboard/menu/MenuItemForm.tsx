@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Category, MenuItem } from '@/types/menu';
 import ImageUpload from '@/components/image/ImageUpload';
+import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
 import { fieldErrors, menuItemCreateSchema, type MenuItemCreateInput } from '@/lib/validation';
 
 interface MenuItemFormProps {
@@ -183,9 +184,9 @@ export default function MenuItemForm({
                             }`}
                         >
                             <option value="">Select a category</option>
-                            {categories.map((category) => (
+                            {flattenCategoryTree(buildCategoryTree(categories)).map(({ category, depth }) => (
                                 <option key={category._id} value={category._id}>
-                                    {category.name}
+                                    {`${'\u00A0\u00A0'.repeat(depth)}${category.name}`}
                                 </option>
                             ))}
                         </select>

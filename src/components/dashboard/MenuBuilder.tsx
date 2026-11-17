@@ -3,6 +3,7 @@
 import type { RestaurantData } from '@/types/restaurant';
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest, errorMessage } from '@/lib/client-api';
+import { getDescendantIds } from '@/lib/category-tree';
 import CategoryManager from './menu/CategoryManager';
 import MenuItemManager from './menu/MenuItemManager';
 import { Category, MenuItem } from '@/types/menu';
@@ -51,9 +52,10 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
     };
 
     const handleCategoryDeleted = (categoryId: string) => {
-        setCategories(prev => prev.filter(cat => cat._id !== categoryId));
-        setMenuItems(prev => prev.filter(item => item.categoryId !== categoryId));
-        if (selectedCategory === categoryId) {
+        const removed = new Set([categoryId, ...getDescendantIds(categories, categoryId)]);
+        setCategories(prev => prev.filter(cat => !removed.has(cat._id)));
+        setMenuItems(prev => prev.filter(item => !removed.has(item.categoryId)));
+        if (selectedCategory && removed.has(selectedCategory)) {
             setSelectedCategory(null);
         }
     };

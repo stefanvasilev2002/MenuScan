@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Category } from '@/types/menu';
 import { apiRequest, errorMessage } from '@/lib/client-api';
+import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
 import type { CategoryCreateInput } from '@/lib/validation';
 import CategoryForm from './CategoryForm';
 import CategoryItem from './CategoryItem';
@@ -56,7 +57,7 @@ export default function CategoryManager({
     });
 
     const handleDeleteCategory = (categoryId: string) => {
-        if (!confirm('Are you sure you want to delete this category? All menu items in this category will also be deleted.')) {
+        if (!confirm('Are you sure you want to delete this category? Its subcategories and all their menu items will also be deleted.')) {
             return;
         }
         return run(async () => {
@@ -65,7 +66,7 @@ export default function CategoryManager({
         });
     };
 
-    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+    const sortedCategories = flattenCategoryTree(buildCategoryTree(categories));
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -99,6 +100,7 @@ export default function CategoryManager({
                 {isCreating && (
                     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <CategoryForm
+                            categories={categories}
                             onSubmit={handleCreateCategory}
                             onCancel={() => setIsCreating(false)}
                             submitLabel="Create Category"
@@ -110,6 +112,7 @@ export default function CategoryManager({
                     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <CategoryForm
                             key={editingCategory._id}
+                            categories={categories}
                             category={editingCategory}
                             onSubmit={(data) => handleUpdateCategory(editingCategory._id, data)}
                             onCancel={() => setEditingCategory(null)}
@@ -142,9 +145,10 @@ export default function CategoryManager({
                         </div>
                     ) : (
                         <>
-                            {sortedCategories.map((category) => (
+                            {sortedCategories.map(({ category, depth }) => (
                                 <CategoryItem
                                     key={category._id}
+                                    depth={depth}
                                     category={category}
                                     isSelected={selectedCategory === category._id}
                                     onSelect={() => onCategorySelect(category._id)}
