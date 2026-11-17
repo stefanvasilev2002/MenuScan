@@ -17,13 +17,15 @@ import {
     Sparkles
 } from 'lucide-react';
 import type { RestaurantData, UserData } from '@/types/restaurant';
+import type { OwnerCounts } from '@/lib/stats';
 
 interface RestaurantsListProps {
     restaurants: RestaurantData[];
     user: UserData;
+    counts: OwnerCounts;
 }
 
-export default function RestaurantsList({ restaurants, user }: RestaurantsListProps) {
+export default function RestaurantsList({ restaurants, user, counts }: RestaurantsListProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [newRestaurant, setNewRestaurant] = useState({
         name: '',
@@ -151,6 +153,20 @@ export default function RestaurantsList({ restaurants, user }: RestaurantsListPr
                                 Manage {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''}
                             </p>
                         </div>
+
+                        <dl aria-label="Account totals" className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+                            {[
+                                { label: 'Menus', value: counts.restaurants, hint: `${counts.activeRestaurants} online` },
+                                { label: 'Categories', value: counts.categories },
+                                { label: 'Menu items', value: counts.items },
+                            ].map(({ label, value, hint }) => (
+                                <div key={label} className="bg-white/80 rounded-xl shadow-sm border border-white/40 p-4 text-center">
+                                    <dt className="text-sm text-gray-600">{label}</dt>
+                                    <dd className="text-3xl font-bold text-gray-900">{value}</dd>
+                                    {hint && <dd className="text-xs text-gray-500">{hint}</dd>}
+                                </div>
+                            ))}
+                        </dl>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                             {restaurants.map((restaurant) => (
@@ -196,6 +212,11 @@ export default function RestaurantsList({ restaurants, user }: RestaurantsListPr
                                                 {restaurant.description}
                                             </p>
                                         )}
+
+                                        <p className="text-sm text-gray-700 mb-4">
+                                            {counts.perRestaurant[restaurant._id]?.categories ?? 0} categories ·{' '}
+                                            {counts.perRestaurant[restaurant._id]?.items ?? 0} items
+                                        </p>
 
                                         {/* Restaurant Info */}
                                         <div className="space-y-2 mb-6">
