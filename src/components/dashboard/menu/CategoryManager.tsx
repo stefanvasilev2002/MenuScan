@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Category } from '@/types/menu';
 import { apiRequest, errorMessage } from '@/lib/client-api';
 import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
+import { moveId, type MoveDirection } from '@/lib/reorder';
 import type { CategoryCreateInput } from '@/lib/validation';
 import CategoryForm from './CategoryForm';
 import CategoryItem from './CategoryItem';
@@ -16,6 +17,7 @@ interface CategoryManagerProps {
     onCategoryCreated: (category: Category) => void;
     onCategoryUpdated: (category: Category) => void;
     onCategoryDeleted: (categoryId: string) => void;
+    onCategoriesReordered: (categories: Category[]) => void;
 }
 
 export default function CategoryManager({
@@ -25,7 +27,8 @@ export default function CategoryManager({
     onCategorySelect,
     onCategoryCreated,
     onCategoryUpdated,
-    onCategoryDeleted
+    onCategoryDeleted,
+    onCategoriesReordered
 }: CategoryManagerProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -67,6 +70,22 @@ export default function CategoryManager({
     };
 
     const sortedCategories = flattenCategoryTree(buildCategoryTree(categories));
+    const siblingIds = (parentId: string | null | undefined) =>
+        sortedCategories.filter(({ category }) => (category.parentId ?? null) === (parentId ?? null)).map(({ category }) => category._id);
+
+    const handleMoveCategory = (category: Category, direction: MoveDirection) => {
+        const orderedIds = moveId(siblingIds(category.parentId), category._id, direction);
+        if (!orderedIds) {
+            return;
+        }
+        return run(async () => {
+            const updated = await apiRequest<Category[]>(`${baseUrl}/reorder`, {
+                method: 'PUT',
+                body: JSON.stringify({ parentId: category.parentId ?? null, orderedIds }),
+            });
+            onCategoriesReordered(updated);
+        });
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -154,6 +173,9 @@ export default function CategoryManager({
                                     onSelect={() => onCategorySelect(category._id)}
                                     onEdit={() => setEditingCategory(category)}
                                     onDelete={() => handleDeleteCategory(category._id)}
+                                    canMoveUp={siblingIds(category.parentId)[0] !== category._id}
+                                    canMoveDown={siblingIds(category.parentId).at(-1) !== category._id}
+                                    onMove={(direction) => handleMoveCategory(category, direction)}
                                 />
                             ))}
                             

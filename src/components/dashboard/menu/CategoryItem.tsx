@@ -1,6 +1,8 @@
 'use client';
 
 import { Category } from '@/types/menu';
+import type { MoveDirection } from '@/lib/reorder';
+import MoveButtons from './MoveButtons';
 
 interface CategoryItemProps {
     category: Category;
@@ -9,6 +11,9 @@ interface CategoryItemProps {
     onSelect: () => void;
     onEdit: () => void;
     onDelete: () => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
+    onMove?: (direction: MoveDirection) => void;
 }
 
 export default function CategoryItem({ 
@@ -17,7 +22,10 @@ export default function CategoryItem({
     isSelected, 
     onSelect, 
     onEdit, 
-    onDelete 
+    onDelete,
+    canMoveUp = false,
+    canMoveDown = false,
+    onMove
 }: CategoryItemProps) {
     return (
         <div
@@ -30,6 +38,9 @@ export default function CategoryItem({
             onClick={onSelect}
         >
             <div className="flex items-center space-x-3">
+                {onMove && (
+                    <MoveButtons name={category.name} canMoveUp={canMoveUp} canMoveDown={canMoveDown} onMove={onMove} />
+                )}
                 {/* Icon */}
                 <div 
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"

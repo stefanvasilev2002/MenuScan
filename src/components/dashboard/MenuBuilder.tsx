@@ -70,6 +70,15 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
         ));
     };
 
+    const handleCategoriesReordered = (updated: Category[]) => {
+        setCategories(updated);
+    };
+
+    const handleMenuItemsReordered = (updated: MenuItem[]) => {
+        const byId = new Map(updated.map(item => [item._id, item]));
+        setMenuItems(prev => prev.map(item => byId.get(item._id) ?? item));
+    };
+
     const handleMenuItemDeleted = (itemId: string) => {
         setMenuItems(prev => prev.filter(item => item._id !== itemId));
     };
@@ -153,6 +162,7 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
                         onCategoryCreated={handleCategoryCreated}
                         onCategoryUpdated={handleCategoryUpdated}
                         onCategoryDeleted={handleCategoryDeleted}
+                        onCategoriesReordered={handleCategoriesReordered}
                     />
                 </div>
 
@@ -165,6 +175,7 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
                         onMenuItemCreated={handleMenuItemCreated}
                         onMenuItemUpdated={handleMenuItemUpdated}
                         onMenuItemDeleted={handleMenuItemDeleted}
+                        onMenuItemsReordered={handleMenuItemsReordered}
                     />
                 </div>
             </div>

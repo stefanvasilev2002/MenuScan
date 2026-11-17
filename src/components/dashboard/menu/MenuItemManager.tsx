@@ -5,6 +5,7 @@ import { Category, MenuItem } from '@/types/menu';
 import { apiRequest, errorMessage } from '@/lib/client-api';
 import type { MenuItemCreateInput } from '@/lib/validation';
 import { availabilityPatch, type AvailabilityStatus } from '@/lib/availability';
+import { moveId, type MoveDirection } from '@/lib/reorder';
 import MenuItemForm from './MenuItemForm';
 import MenuItemCard from './MenuItemCard';
 
@@ -16,6 +17,7 @@ interface MenuItemManagerProps {
     onMenuItemCreated: (item: MenuItem) => void;
     onMenuItemUpdated: (item: MenuItem) => void;
     onMenuItemDeleted: (itemId: string) => void;
+    onMenuItemsReordered: (items: MenuItem[]) => void;
 }
 
 export default function MenuItemManager({
@@ -25,7 +27,8 @@ export default function MenuItemManager({
     selectedCategory,
     onMenuItemCreated,
     onMenuItemUpdated,
-    onMenuItemDeleted
+    onMenuItemDeleted,
+    onMenuItemsReordered
 }: MenuItemManagerProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -76,6 +79,21 @@ export default function MenuItemManager({
         : null;
 
     const sortedMenuItems = [...menuItems].sort((a, b) => a.order - b.order);
+    const sortedIds = sortedMenuItems.map((item) => item._id);
+
+    const handleMoveItem = (itemId: string, direction: MoveDirection) => {
+        const orderedIds = moveId(sortedIds, itemId, direction);
+        if (!selectedCategory || !orderedIds) {
+            return;
+        }
+        return run(async () => {
+            const updated = await apiRequest<MenuItem[]>(`${baseUrl}/reorder`, {
+                method: 'PUT',
+                body: JSON.stringify({ categoryId: selectedCategory, orderedIds }),
+            });
+            onMenuItemsReordered(updated);
+        });
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -187,6 +205,9 @@ export default function MenuItemManager({
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}
                                     onAvailabilityChange={(status) => handleAvailabilityChange(item._id, status)}
+                                    canMoveUp={sortedIds[0] !== item._id}
+                                    canMoveDown={sortedIds.at(-1) !== item._id}
+                                    onMove={selectedCategory ? (direction) => handleMoveItem(item._id, direction) : undefined}
                                 />
                             ))}
                         </div>

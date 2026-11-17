@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { Category, MenuItem } from '@/types/menu';
 import { availabilityOf, type AvailabilityStatus } from '@/lib/availability';
 import AvailabilityControl from './AvailabilityControl';
+import MoveButtons from './MoveButtons';
+import type { MoveDirection } from '@/lib/reorder';
 
 interface MenuItemCardProps {
     item: MenuItem;
@@ -11,6 +13,9 @@ interface MenuItemCardProps {
     onEdit: () => void;
     onDelete: () => void;
     onAvailabilityChange: (status: AvailabilityStatus) => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
+    onMove?: (direction: MoveDirection) => void;
 }
 
 export default function MenuItemCard({ 
@@ -18,7 +23,10 @@ export default function MenuItemCard({
     category, 
     onEdit, 
     onDelete, 
-    onAvailabilityChange 
+    onAvailabilityChange,
+    canMoveUp = false,
+    canMoveDown = false,
+    onMove
 }: MenuItemCardProps) {
     const status = availabilityOf(item);
 
@@ -78,12 +86,17 @@ export default function MenuItemCard({
                 </div>
             </div>
 
-            <div className="px-4 pt-3">
+            <div className="px-4 pt-3 flex items-center justify-between gap-2">
                 <AvailabilityControl
                     value={status}
                     onChange={onAvailabilityChange}
                     label={`Availability of ${item.name}`}
                 />
+                {onMove && (
+                    <div className="flex">
+                        <MoveButtons name={item.name} canMoveUp={canMoveUp} canMoveDown={canMoveDown} onMove={onMove} />
+                    </div>
+                )}
             </div>
 
             {/* Content */}

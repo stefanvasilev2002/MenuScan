@@ -44,6 +44,30 @@ describe('MenuItemCard availability control', () => {
         expect(screen.getByText('Hidden from menu')).toBeInTheDocument();
     });
 
+    it('moves items with the up and down buttons and disables them at the edges', async () => {
+        const onMove = vi.fn();
+        render(
+            <MenuItemCard
+                item={baseItem}
+                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                onAvailabilityChange={vi.fn()}
+                canMoveUp={false}
+                canMoveDown
+                onMove={onMove}
+            />,
+        );
+
+        expect(screen.getByRole('button', { name: 'Move Burek up' })).toBeDisabled();
+        await userEvent.click(screen.getByRole('button', { name: 'Move Burek down' }));
+        expect(onMove).toHaveBeenCalledWith('down');
+    });
+
+    it('hides move buttons when reordering is not available', () => {
+        renderCard();
+        expect(screen.queryByRole('button', { name: /move burek/i })).not.toBeInTheDocument();
+    });
+
     it('reports a new status and ignores clicks on the current one', async () => {
         const { onAvailabilityChange } = renderCard();
 

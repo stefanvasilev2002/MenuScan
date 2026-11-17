@@ -113,6 +113,22 @@ export const menuItemCreateSchema = z.object({
 
 export const menuItemUpdateSchema = z.object(menuItemFields).partial().strict();
 
+const orderedIdsSchema = z
+    .array(objectIdSchema)
+    .min(1, 'Nothing to reorder')
+    .max(500)
+    .refine((ids) => new Set(ids).size === ids.length, 'Ids must be unique');
+
+export const categoryReorderSchema = z.object({
+    parentId: objectIdSchema.nullable(),
+    orderedIds: orderedIdsSchema,
+});
+
+export const menuItemReorderSchema = z.object({
+    categoryId: objectIdSchema,
+    orderedIds: orderedIdsSchema,
+});
+
 export const deleteImageSchema = z.object({
     publicId: z.string().trim().min(1).max(200),
 });
