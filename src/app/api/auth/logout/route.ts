@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { AUTH_COOKIE } from '@/lib/auth';
 
 export async function POST() {
-    try {
-        cookies().delete('auth_token');
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error('Logout error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
-    }
+    const response = NextResponse.json({ success: true });
+    response.cookies.delete(AUTH_COOKIE);
+    return response;
 }

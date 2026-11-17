@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { getJwtSecret, MissingEnvError } from '@/lib/env';
 
 // Routes that require authentication
 const PROTECTED_ROUTES = ['/dashboard', '/api/restaurant'];
@@ -34,16 +35,17 @@ export async function middleware(request: NextRequest) {
         }
 
         try {
-            const JWT_SECRET = process.env.JWT_SECRET;
-            if (!JWT_SECRET) {
-                console.error('JWT_SECRET is not defined');
+            let secret: Uint8Array;
+            try {
+                secret = getJwtSecret();
+            } catch (envError) {
+                console.error(envError instanceof MissingEnvError ? envError.message : envError);
                 if (pathname.startsWith('/api/')) {
                     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
                 }
                 return NextResponse.redirect(new URL('/login', request.url));
             }
 
-            const secret = new TextEncoder().encode(JWT_SECRET);
             const { payload } = await jwtVerify(authToken.value, secret);
 
             // For API routes, just add the user ID header and continue
