@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Category, MenuItem } from '@/types/menu';
 import { apiRequest, errorMessage } from '@/lib/client-api';
 import type { MenuItemCreateInput } from '@/lib/validation';
+import { availabilityPatch, type AvailabilityStatus } from '@/lib/availability';
 import MenuItemForm from './MenuItemForm';
 import MenuItemCard from './MenuItemCard';
 
@@ -62,10 +63,10 @@ export default function MenuItemManager({
         });
     };
 
-    const handleToggleAvailability = (itemId: string, isAvailable: boolean) => run(async () => {
+    const handleAvailabilityChange = (itemId: string, status: AvailabilityStatus) => run(async () => {
         const updatedItem = await apiRequest<MenuItem>(`${baseUrl}/${itemId}`, {
             method: 'PUT',
-            body: JSON.stringify({ isAvailable }),
+            body: JSON.stringify(availabilityPatch(status)),
         });
         onMenuItemUpdated(updatedItem);
     });
@@ -185,7 +186,7 @@ export default function MenuItemManager({
                                     category={categories.find(cat => cat._id === item.categoryId)}
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}
-                                    onToggleAvailability={() => handleToggleAvailability(item._id, !item.isAvailable)}
+                                    onAvailabilityChange={(status) => handleAvailabilityChange(item._id, status)}
                                 />
                             ))}
                         </div>

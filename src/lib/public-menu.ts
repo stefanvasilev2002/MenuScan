@@ -82,7 +82,7 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
         }));
 
     const items: PublicMenuItem[] = itemDocs
-        .filter((i) => visibleIds.has(String(i.categoryId)))
+        .filter((i) => !i.isHidden && visibleIds.has(String(i.categoryId)))
         .map((i) => ({
             _id: String(i._id),
             categoryId: String(i.categoryId),

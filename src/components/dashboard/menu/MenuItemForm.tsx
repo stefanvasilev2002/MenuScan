@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Category, MenuItem } from '@/types/menu';
 import ImageUpload from '@/components/image/ImageUpload';
+import { availabilityOf, availabilityPatch } from '@/lib/availability';
+import AvailabilityControl from './AvailabilityControl';
 import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
 import { fieldErrors, menuItemCreateSchema, type MenuItemCreateInput } from '@/lib/validation';
 
@@ -36,6 +38,7 @@ export default function MenuItemForm({
         imageUrl: item?.imageUrl ?? '',
         imagePublicId: item?.imagePublicId ?? '',
         isAvailable: item?.isAvailable ?? true,
+        isHidden: item?.isHidden ?? false,
         isVegetarian: item?.isVegetarian ?? false,
         isVegan: item?.isVegan ?? false,
         isSpicy: item?.isSpicy ?? false,
@@ -270,17 +273,16 @@ export default function MenuItemForm({
                         </div>
                     </div>
 
-                    {/* Availability */}
-                    <div>
-                        <label className="flex items-center">
-                            <input
-                                type="checkbox"
-                                checked={formData.isAvailable}
-                                onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Available for ordering</span>
-                        </label>
+                    <div className="space-y-2">
+                        <span className="block text-sm font-medium text-gray-700">Availability</span>
+                        <AvailabilityControl
+                            label="Availability"
+                            value={availabilityOf(formData)}
+                            onChange={(status) => setFormData(prev => ({ ...prev, ...availabilityPatch(status) }))}
+                        />
+                        <p className="text-xs text-gray-500">
+                            Sold out items stay on the menu with a badge. Hidden items are not shown to guests.
+                        </p>
                     </div>
                 </div>
             </div>

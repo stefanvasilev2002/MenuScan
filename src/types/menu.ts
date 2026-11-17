@@ -21,6 +21,7 @@ export interface MenuItem {
     imageUrl?: string;
     imagePublicId?: string;
     isAvailable: boolean;
+    isHidden?: boolean;
     isVegetarian?: boolean;
     isVegan?: boolean;
     isSpicy?: boolean;

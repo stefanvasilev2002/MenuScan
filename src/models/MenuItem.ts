@@ -7,6 +7,7 @@ export interface IMenuItem {
     description: string;
     price: number;
     isAvailable: boolean;
+    isHidden: boolean;
     ingredients: string[];
     allergens: string[];
     isSpicy: boolean;
@@ -53,6 +54,10 @@ const MenuItemSchema = new Schema<IMenuItem>(
         isAvailable: {
             type: Boolean,
             default: true,
+        },
+        isHidden: {
+            type: Boolean,
+            default: false,
         },
         ingredients: {
             type: [String],
