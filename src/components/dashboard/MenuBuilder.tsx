@@ -169,6 +169,7 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
                 <div className="flex-1 min-w-0">
                     <MenuItemManager
                         restaurantSlug={restaurant.slug}
+                        currency={restaurant.currency}
                         categories={categories}
                         menuItems={filteredMenuItems}
                         selectedCategory={selectedCategory}

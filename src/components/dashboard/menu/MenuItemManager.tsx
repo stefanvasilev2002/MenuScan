@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Category, MenuItem } from '@/types/menu';
+import type { Currency } from '@/types/types';
 import { apiRequest, errorMessage } from '@/lib/client-api';
 import type { MenuItemCreateInput } from '@/lib/validation';
 import { availabilityPatch, type AvailabilityStatus } from '@/lib/availability';
@@ -11,6 +12,7 @@ import MenuItemCard from './MenuItemCard';
 
 interface MenuItemManagerProps {
     restaurantSlug: string;
+    currency: Currency;
     categories: Category[];
     menuItems: MenuItem[];
     selectedCategory: string | null;
@@ -22,6 +24,7 @@ interface MenuItemManagerProps {
 
 export default function MenuItemManager({
     restaurantSlug,
+    currency,
     categories,
     menuItems,
     selectedCategory,
@@ -141,6 +144,7 @@ export default function MenuItemManager({
                 {isCreating && (
                     <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg">
                         <MenuItemForm
+                            currency={currency}
                             categories={categories}
                             selectedCategoryId={selectedCategory}
                             onSubmit={handleCreateMenuItem}
@@ -155,6 +159,7 @@ export default function MenuItemManager({
                         <MenuItemForm
                             key={editingItem._id}
                             item={editingItem}
+                            currency={currency}
                             categories={categories}
                             onSubmit={(data) => handleUpdateMenuItem(editingItem._id, data)}
                             onCancel={() => setEditingItem(null)}
@@ -201,6 +206,7 @@ export default function MenuItemManager({
                                 <MenuItemCard
                                     key={item._id}
                                     item={item}
+                                    currency={currency}
                                     category={categories.find(cat => cat._id === item.categoryId)}
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}

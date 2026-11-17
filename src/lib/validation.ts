@@ -37,6 +37,23 @@ export const restaurantCreateSchema = z.object({
     description: optionalText(500, 'Description').optional().default(''),
 });
 
+export const restaurantUpdateSchema = z
+    .object({
+        name: trimmed(100, 'Restaurant name'),
+        description: optionalText(500, 'Description'),
+        address: optionalText(200, 'Address'),
+        phone: z
+            .string()
+            .trim()
+            .transform((v) => v.replace(/[\s().-]/g, ''))
+            .refine((v) => v === '' || /^\+?\d{6,16}$/.test(v), 'Enter a valid phone number'),
+        email: z.union([z.literal(''), emailSchema]),
+        currency: z.enum(['MKD', 'EUR', 'USD']),
+        isActive: z.boolean(),
+    })
+    .partial()
+    .strict();
+
 export const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i, 'Color must be a hex value like #3B82F6');
 
 export const categoryCreateSchema = z.object({
@@ -135,6 +152,7 @@ export const deleteImageSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type RestaurantUpdateInput = z.infer<typeof restaurantUpdateSchema>;
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
 export type MenuItemCreateInput = z.infer<typeof menuItemCreateSchema>;

@@ -58,7 +58,7 @@ const RestaurantSchema = new Schema<IRestaurant, RestaurantModel>({
     },
     phone: {
         type: String,
-        match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number']
+        match: [/^\+?\d{6,16}$/, 'Please enter a valid phone number']
     },
     email: {
         type: String,

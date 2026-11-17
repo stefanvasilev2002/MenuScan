@@ -6,9 +6,12 @@ import { availabilityOf, type AvailabilityStatus } from '@/lib/availability';
 import AvailabilityControl from './AvailabilityControl';
 import MoveButtons from './MoveButtons';
 import type { MoveDirection } from '@/lib/reorder';
+import { formatPrice } from '@/lib/currency';
+import type { Currency } from '@/types/types';
 
 interface MenuItemCardProps {
     item: MenuItem;
+    currency?: Currency;
     category?: Category;
     onEdit: () => void;
     onDelete: () => void;
@@ -20,6 +23,7 @@ interface MenuItemCardProps {
 
 export default function MenuItemCard({ 
     item, 
+    currency = 'MKD',
     category, 
     onEdit, 
     onDelete, 
@@ -119,7 +123,7 @@ export default function MenuItemCard({
                     </div>
                     <div className="text-right ml-2">
                         <p className="text-lg font-bold text-gray-900">
-                            ${item.price.toFixed(2)}
+                            {formatPrice(item.price, currency)}
                         </p>
                     </div>
                 </div>

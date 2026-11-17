@@ -5,11 +5,13 @@ import { Category, MenuItem } from '@/types/menu';
 import ImageUpload from '@/components/image/ImageUpload';
 import { availabilityOf, availabilityPatch } from '@/lib/availability';
 import AvailabilityControl from './AvailabilityControl';
+import type { Currency } from '@/types/types';
 import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
 import { fieldErrors, menuItemCreateSchema, type MenuItemCreateInput } from '@/lib/validation';
 
 interface MenuItemFormProps {
     item?: MenuItem;
+    currency?: Currency;
     categories: Category[];
     selectedCategoryId?: string | null;
     onSubmit: (data: MenuItemCreateInput) => Promise<void>;
@@ -24,6 +26,7 @@ const ALLERGEN_OPTIONS = [
 
 export default function MenuItemForm({
     item,
+    currency = 'MKD',
     categories,
     selectedCategoryId,
     onSubmit,
@@ -152,10 +155,9 @@ export default function MenuItemForm({
 
                     <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                            Price *
+                            Price ({currency}) *
                         </label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-500">$</span>
                             <input
                                 type="number"
                                 id="price"
@@ -163,7 +165,7 @@ export default function MenuItemForm({
                                 onChange={(e) => handleInputChange('price', e.target.value)}
                                 step="0.01"
                                 min="0"
-                                className={`w-full pl-8 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                     errors.price ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="0.00"

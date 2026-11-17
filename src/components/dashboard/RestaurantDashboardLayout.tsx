@@ -11,6 +11,7 @@ import {
     Menu as MenuIcon,
     Building2,
     QrCode,
+    Settings,
     Bell,
     Search,
     ChevronDown,
@@ -28,6 +29,7 @@ const navigation = [
     { name: 'Overview', href: '', icon: LayoutDashboard },
     { name: 'Menu Builder', href: '/menu', icon: Utensils },
     { name: 'QR Code', href: '/qr', icon: QrCode },
+    { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function RestaurantDashboardLayout({ children, restaurant }: RestaurantDashboardLayoutProps) {
