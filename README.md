@@ -10,11 +10,13 @@ MenuScan is a digital menu builder for restaurants and cafés. Owners sign up, c
 - **Multiple restaurants per account**, each with its own URL slug and dashboard
 - **Nested categories** (for example *Drinks → Hot drinks → Coffee*), with cycle protection, emoji icons from a full emoji picker, colours, and visibility
 - **Menu items** with price, description, image upload (Cloudinary), allergens, ingredients, dietary flags, and preparation time
-- **Availability control**: mark items as sold out or hide them from the public menu
-- **Ordering**: reorder categories and items from the dashboard
-- **Public menu page** with text search, category/dietary/price filters, and a MKD/EUR/USD currency switch
+- **Availability control**: mark items as available, sold out (shown with a badge) or hidden from guests
+- **Reordering** of categories and items with up/down controls
+- **Duplicate items** in one click; copies start hidden so they can be edited first
+- **Public menu page** with text search (accent- and Cyrillic-aware), category/dietary/price filters, a sticky category jump bar, MK/EN labels and a MKD/EUR/USD currency switch
+- **Restaurant settings**: name, contact details, base currency, and taking a menu offline
 - **QR codes**: a downloadable QR code that links to each restaurant's public menu
-- **Dashboard overview** with counts of categories, items, and items that are available, sold out or hidden
+- **Dashboard overview** with counts of menus, categories (top-level and nested), items, and items that are available, sold out, hidden or missing a photo
 
 ## Tech stack
 
@@ -35,18 +37,20 @@ MenuScan is a digital menu builder for restaurants and cafés. Owners sign up, c
 ```
 Browser ──► middleware.ts ──► App Router pages (server components)
    │         (verifies JWT,        │
-   │          sets x-user-id)      ▼
+   │          redirects or 401)    ▼
    │                         client components (dashboard)
    │                               │ fetch
    ▼                               ▼
 /menu/[slug] (public) ──► /api/public/...   /api/restaurant/[slug]/...  (owner only)
                                    │                 │
-                                   └──► src/lib/services ◄──┘
+                                   └──►   src/lib   ◄──────┘
+                                     (api helpers, zod schemas,
+                                      category tree, stats)
                                               │
                                         Mongoose models ──► MongoDB Atlas
 ```
 
-- **Middleware** rejects unauthenticated requests to `/dashboard/*` and `/api/restaurant/*`, and forwards the verified user id to route handlers.
+- **Middleware** rejects unauthenticated requests to `/dashboard/*`, `/api/restaurant/*` and `/api/upload`. Route handlers verify the session cookie again themselves, so they never trust a client-supplied header.
 - **Route handlers** parse input with zod schemas from `src/lib/validation`. Every query is scoped to a restaurant owned by the current user, so a user can never read or change another user's data, even by guessing ids.
 - **Public endpoints** return only visible categories and non-hidden items for active restaurants.
 
@@ -57,17 +61,20 @@ src/
   app/
     api/
       auth/            login, register, logout, session
-      restaurant/      owner-only CRUD for restaurants, categories, items, stats
+      restaurant/      owner-only CRUD, reordering, duplication, settings and stats
       public/          read-only public menu data
       upload/          authenticated Cloudinary upload/delete
-    dashboard/         owner dashboard (overview, menu builder, QR code)
+    dashboard/         owner dashboard (overview, menu builder, QR code, settings)
     menu/[slug]/       public menu page
     login/, register/  auth pages
   components/          dashboard, menu, currency, image and emoji components
   lib/                 db connection, auth, env, validation schemas, helpers
   models/              Mongoose models (User, Restaurant, Category, MenuItem, Order)
   types/               shared TypeScript types
-tests/                 Vitest unit and API tests
+tests/
+  lib/                 unit tests for pure helpers and schemas
+  api/                 route handler tests against an in-memory MongoDB
+  components/          React Testing Library tests
 ```
 
 ## Getting started
