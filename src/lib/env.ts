@@ -32,6 +32,14 @@ export function getCloudinaryConfig() {
     };
 }
 
-export function getPublicBaseUrl(): string {
-    return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+export function resolveBaseUrl(host: string | null, protocol: string | null): string {
+    const configured = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+    if (configured) {
+        return configured.replace(/\/+$/, '');
+    }
+    if (host) {
+        const proto = protocol ?? (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
+        return `${proto}://${host}`;
+    }
+    return 'http://localhost:3000';
 }
