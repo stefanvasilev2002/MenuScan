@@ -1,4 +1,5 @@
-import {Currency, CURRENCY_SYMBOLS, EXCHANGE_RATES} from "@/types/types";
+import { CURRENCIES } from '@/lib/currency';
+import { CURRENCY_SYMBOLS, type Currency } from '@/types/types';
 
 interface CurrencySwitcherProps {
     currentCurrency: Currency;
@@ -8,10 +9,13 @@ interface CurrencySwitcherProps {
 export function CurrencySwitcher({ currentCurrency, onCurrencyChange }: CurrencySwitcherProps) {
     return (
         <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
-            {Object.keys(EXCHANGE_RATES).map((curr) => (
+            {CURRENCIES.map((curr) => (
                 <button
                     key={curr}
-                    onClick={() => onCurrencyChange(curr as Currency)}
+                    type="button"
+                    aria-pressed={currentCurrency === curr}
+                    aria-label={curr}
+                    onClick={() => onCurrencyChange(curr)}
                     className={`
                         px-3 py-1.5 rounded-md text-sm font-medium transition-colors
                         ${currentCurrency === curr
@@ -20,7 +24,7 @@ export function CurrencySwitcher({ currentCurrency, onCurrencyChange }: Currency
                     }
                     `}
                 >
-                    {CURRENCY_SYMBOLS[curr as Currency]}
+                    {CURRENCY_SYMBOLS[curr]}
                 </button>
             ))}
         </div>

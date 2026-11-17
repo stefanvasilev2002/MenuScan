@@ -86,6 +86,29 @@ function subtreeHeight(categories: TreeCategory[], id: string): number {
     return 1 + Math.max(...children.map((c) => subtreeHeight(categories, c._id)));
 }
 
+export function getVisibleCategoryIds<T extends TreeCategory & { isVisible: boolean }>(categories: T[]): Set<string> {
+    const byId = new Map(categories.map((c) => [c._id, c]));
+    const memo = new Map<string, boolean>();
+
+    const isVisible = (id: string, seen: Set<string>): boolean => {
+        const cached = memo.get(id);
+        if (cached !== undefined) {
+            return cached;
+        }
+        const category = byId.get(id);
+        if (!category || !category.isVisible || seen.has(id)) {
+            memo.set(id, false);
+            return false;
+        }
+        seen.add(id);
+        const parentVisible = category.parentId ? byId.has(category.parentId) && isVisible(category.parentId, seen) : true;
+        memo.set(id, parentVisible);
+        return parentVisible;
+    };
+
+    return new Set(categories.filter((c) => isVisible(c._id, new Set())).map((c) => c._id));
+}
+
 export type ParentValidation = { ok: true } | { ok: false; reason: string };
 
 export function validateParent(
