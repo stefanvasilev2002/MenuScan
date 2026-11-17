@@ -3,8 +3,10 @@
 import { useMemo, useState } from 'react';
 import { CurrencySwitcher } from '@/components/currency/CurrencySwitcher';
 import { buildCategoryTree, type CategoryNode } from '@/lib/category-tree';
+import { EMPTY_FILTERS, filterMenuItems, hasActiveFilters, type MenuFilters } from '@/lib/menu-filter';
 import type { PublicCategory, PublicMenu, PublicMenuItem } from '@/lib/public-menu';
 import type { Currency } from '@/types/types';
+import MenuFilterBar from './MenuFilterBar';
 import PublicMenuItemCard from './PublicMenuItemCard';
 import { MENU_TEXT, type MenuLang } from './menu-text';
 
@@ -81,16 +83,22 @@ function CategorySection({
 export default function PublicMenuView({ menu }: Props) {
     const [lang, setLang] = useState<MenuLang>('en');
     const [currency, setCurrency] = useState<Currency>(menu.restaurant.currency);
+    const [filters, setFilters] = useState<MenuFilters>(EMPTY_FILTERS);
     const t = MENU_TEXT[lang];
 
     const tree = useMemo(() => buildCategoryTree(menu.categories), [menu.categories]);
+    const visibleItems = useMemo(
+        () => filterMenuItems(menu.items, menu.categories, filters),
+        [menu.items, menu.categories, filters],
+    );
     const itemsByCategory = useMemo(() => {
         const map = new Map<string, PublicMenuItem[]>();
-        for (const item of [...menu.items].sort((a, b) => a.order - b.order)) {
+        for (const item of [...visibleItems].sort((a, b) => a.order - b.order)) {
             map.set(item.categoryId, [...(map.get(item.categoryId) ?? []), item]);
         }
         return map;
-    }, [menu.items]);
+    }, [visibleItems]);
+    const priceCeiling = useMemo(() => Math.ceil(Math.max(0, ...menu.items.map((i) => i.price))), [menu.items]);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -112,9 +120,25 @@ export default function PublicMenuView({ menu }: Props) {
                 </div>
             </header>
 
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 space-y-12">
+                {menu.items.length > 0 && (
+                    <div className="-mt-6">
+                        <MenuFilterBar
+                            filters={filters}
+                            onChange={setFilters}
+                            categories={menu.categories}
+                            priceCeiling={priceCeiling}
+                            baseCurrency={menu.restaurant.currency}
+                            currency={currency}
+                            lang={lang}
+                            resultCount={visibleItems.length}
+                        />
+                    </div>
+                )}
                 {menu.items.length === 0 ? (
                     <p className="text-center text-gray-500 text-lg py-16">{t.emptyMenu}</p>
+                ) : visibleItems.length === 0 && hasActiveFilters(filters) ? (
+                    <p className="text-center text-gray-500 text-lg py-16">{t.noResults}</p>
                 ) : (
                     tree.map((node) => (
                         <CategorySection

@@ -66,6 +66,46 @@ describe('PublicMenuView', () => {
         expect(within(trout).getByText('€8.00')).toBeInTheDocument();
     });
 
+    it('filters dishes by search text and hides empty categories', async () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+
+        await userEvent.type(screen.getByRole('searchbox'), 'trout');
+
+        expect(screen.getByRole('article', { name: 'Ohrid trout' })).toBeInTheDocument();
+        expect(screen.queryByRole('article', { name: 'Shopska salad' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: /Drinks/ })).not.toBeInTheDocument();
+        expect(screen.getByText('1 dish found')).toBeInTheDocument();
+    });
+
+    it('shows an empty state and clears filters', async () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+
+        await userEvent.type(screen.getByRole('searchbox'), 'pizza');
+        expect(screen.getByText('No dishes match your search.')).toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+        expect(screen.getAllByRole('article')).toHaveLength(3);
+    });
+
+    it('filters by category including subcategories and by dietary toggles', async () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+        await userEvent.click(screen.getByRole('button', { name: /filters/i }));
+
+        await userEvent.selectOptions(screen.getByLabelText('Category'), 'drinks');
+        expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Turkish coffee']);
+
+        await userEvent.selectOptions(screen.getByLabelText('Category'), '');
+        await userEvent.click(screen.getByRole('button', { name: /vegetarian/i }));
+        expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Shopska salad']);
+    });
+
+    it('can hide sold out dishes', async () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+        await userEvent.click(screen.getByRole('button', { name: /filters/i }));
+        await userEvent.click(screen.getByRole('button', { name: 'Hide sold out' }));
+        expect(screen.queryByRole('article', { name: 'Turkish coffee' })).not.toBeInTheDocument();
+    });
+
     it('switches labels to Macedonian', async () => {
         render(<PublicMenuView menu={sampleMenu} />);
         await userEvent.click(screen.getByRole('button', { name: /switch to macedonian/i }));
