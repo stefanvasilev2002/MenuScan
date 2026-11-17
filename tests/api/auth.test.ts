@@ -7,10 +7,12 @@ import { verifyToken } from '@/lib/session';
 import { User } from '@/models/User';
 import { setupTestDatabase } from '../helpers/db';
 import { call } from '../helpers/http';
+import { makeTestPassword } from '../helpers/fixtures';
 
 setupTestDatabase();
 
-const credentials = { email: 'chef@example.com', password: 'Str0ng!pass', businessName: 'Chef Co' };
+const wrongPassword = makeTestPassword();
+const credentials = { email: 'chef@example.com', password: makeTestPassword(), businessName: 'Chef Co' };
 
 function tokenFrom(headers: Headers): string {
     const match = /auth_token=([^;]+)/.exec(headers.get('set-cookie') ?? '');
@@ -61,11 +63,11 @@ describe('POST /api/auth/login', () => {
 
     it('returns the same 401 for a wrong password and an unknown email', async () => {
         await call(register, 'POST', { body: credentials });
-        const wrongPassword = await call(login, 'POST', { body: { email: credentials.email, password: 'Wr0ng!pass' } });
-        const unknownEmail = await call(login, 'POST', { body: { email: 'nobody@example.com', password: 'Wr0ng!pass' } });
-        expect(wrongPassword.status).toBe(401);
+        const wrongPasswordRes = await call(login, 'POST', { body: { email: credentials.email, password: wrongPassword } });
+        const unknownEmail = await call(login, 'POST', { body: { email: 'nobody@example.com', password: wrongPassword } });
+        expect(wrongPasswordRes.status).toBe(401);
         expect(unknownEmail.status).toBe(401);
-        expect(wrongPassword.body).toEqual(unknownEmail.body);
+        expect(wrongPasswordRes.body).toEqual(unknownEmail.body);
     });
 
     it('rejects deactivated accounts', async () => {

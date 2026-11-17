@@ -4,6 +4,7 @@ import { User } from '@/models/User';
 import { Restaurant } from '@/models/Restaurant';
 import { Category } from '@/models/Category';
 import { MenuItem } from '@/models/MenuItem';
+import { makeTestPassword } from './fixtures';
 
 type Handler<P> = (request: NextRequest, context: { params: Promise<P> }) => Promise<Response>;
 
@@ -46,7 +47,7 @@ export async function createUser(overrides: Partial<{ email: string; businessNam
     counter++;
     const user = await User.create({
         email: overrides.email ?? `owner${counter}@example.com`,
-        password: 'Passw0rd!',
+        password: makeTestPassword(),
         businessName: overrides.businessName ?? `Business ${counter}`,
     });
     return { user, token: await signToken(String(user._id)) };

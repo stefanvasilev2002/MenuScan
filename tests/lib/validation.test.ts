@@ -7,13 +7,15 @@ import {
     menuItemUpdateSchema,
     registerSchema,
 } from '@/lib/validation';
+import { makeTestPassword } from '../helpers/fixtures';
 
 const validId = '64b7f9f1c2a4b5d6e7f80912';
 
 describe('registerSchema', () => {
     it('normalises email and accepts a strong password', () => {
-        const result = registerSchema.parse({ email: ' Owner@Example.COM ', password: 'Str0ng!pass', businessName: ' Cafe ' });
-        expect(result).toEqual({ email: 'owner@example.com', password: 'Str0ng!pass', businessName: 'Cafe' });
+        const password = makeTestPassword();
+        const result = registerSchema.parse({ email: ' Owner@Example.COM ', password, businessName: ' Cafe ' });
+        expect(result).toEqual({ email: 'owner@example.com', password, businessName: 'Cafe' });
     });
 
     it.each([
@@ -27,7 +29,7 @@ describe('registerSchema', () => {
     });
 
     it('rejects invalid emails with a field error', () => {
-        const result = registerSchema.safeParse({ email: 'nope', password: 'Str0ng!pass', businessName: 'X' });
+        const result = registerSchema.safeParse({ email: 'nope', password: makeTestPassword(), businessName: 'X' });
         expect(result.success).toBe(false);
         if (!result.success) {
             expect(fieldErrors(result.error)).toHaveProperty('email');
