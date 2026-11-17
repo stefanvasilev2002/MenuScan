@@ -1,32 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import type { RestaurantData } from '@/types/restaurant';
+import { useCallback, useEffect, useState } from 'react';
+import { apiRequest, errorMessage } from '@/lib/client-api';
+import { getDescendantIds } from '@/lib/category-tree';
 import CategoryManager from './menu/CategoryManager';
 import MenuItemManager from './menu/MenuItemManager';
 import { Category, MenuItem } from '@/types/menu';
 
-interface RestaurantData {
-    _id: string;
-    name: string;
-    slug: string;
-    userId: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    logo?: string;
-    isActive: boolean;
-    settings: {
-        currency: string;
-        timezone: string;
-        orderNumberPrefix: string;
-        autoAcceptOrders: boolean;
-        takeoutEnabled: boolean;
-        deliveryEnabled: boolean;
-    };
-    createdAt: Date;
-    updatedAt: Date;
-}
 
 interface MenuBuilderProps {
     restaurant: RestaurantData;
@@ -39,35 +20,26 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchMenuData();
-    }, [restaurant._id]);
-
-    const fetchMenuData = async () => {
+    const fetchMenuData = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
         try {
-            setIsLoading(true);
-            setError(null);
-
-            const categoriesResponse = await fetch(`/api/restaurant/${restaurant.slug}/categories`);
-            if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
-            const categoriesData = await categoriesResponse.json();
-
-            const itemsResponse = await fetch(`/api/restaurant/${restaurant.slug}/menu-items`);
-            if (!itemsResponse.ok) throw new Error('Failed to fetch menu items');
-            const itemsData = await itemsResponse.json();
-
-            console.log('Fetched categories:', categoriesData);
-            console.log('Fetched menu items:', itemsData);
-
+            const [categoriesData, itemsData] = await Promise.all([
+                apiRequest<Category[]>(`/api/restaurant/${restaurant.slug}/categories`),
+                apiRequest<MenuItem[]>(`/api/restaurant/${restaurant.slug}/menu-items`),
+            ]);
             setCategories(categoriesData);
             setMenuItems(itemsData);
         } catch (err) {
-            console.error('Error fetching menu data:', err);
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setError(errorMessage(err));
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [restaurant.slug]);
+
+    useEffect(() => {
+        fetchMenuData();
+    }, [fetchMenuData]);
 
     const handleCategoryCreated = (newCategory: Category) => {
         setCategories(prev => [...prev, newCategory]);
@@ -80,9 +52,10 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
     };
 
     const handleCategoryDeleted = (categoryId: string) => {
-        setCategories(prev => prev.filter(cat => cat._id !== categoryId));
-        setMenuItems(prev => prev.filter(item => item.categoryId !== categoryId));
-        if (selectedCategory === categoryId) {
+        const removed = new Set([categoryId, ...getDescendantIds(categories, categoryId)]);
+        setCategories(prev => prev.filter(cat => !removed.has(cat._id)));
+        setMenuItems(prev => prev.filter(item => !removed.has(item.categoryId)));
+        if (selectedCategory && removed.has(selectedCategory)) {
             setSelectedCategory(null);
         }
     };
@@ -95,6 +68,18 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
         setMenuItems(prev => prev.map(item =>
             item._id === updatedItem._id ? updatedItem : item
         ));
+    };
+
+    const handleCategoriesReordered = (updated: Category[]) => {
+        setCategories(updated);
+    };
+
+    const handleMenuItemsChanged = (updated: MenuItem[]) => {
+        const byId = new Map(updated.map(item => [item._id, item]));
+        setMenuItems(prev => {
+            const known = new Set(prev.map(item => item._id));
+            return [...prev.map(item => byId.get(item._id) ?? item), ...updated.filter(item => !known.has(item._id))];
+        });
     };
 
     const handleMenuItemDeleted = (itemId: string) => {
@@ -180,18 +165,21 @@ export default function MenuBuilder({ restaurant }: MenuBuilderProps) {
                         onCategoryCreated={handleCategoryCreated}
                         onCategoryUpdated={handleCategoryUpdated}
                         onCategoryDeleted={handleCategoryDeleted}
+                        onCategoriesReordered={handleCategoriesReordered}
                     />
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <MenuItemManager
                         restaurantSlug={restaurant.slug}
+                        currency={restaurant.currency}
                         categories={categories}
                         menuItems={filteredMenuItems}
                         selectedCategory={selectedCategory}
                         onMenuItemCreated={handleMenuItemCreated}
                         onMenuItemUpdated={handleMenuItemUpdated}
                         onMenuItemDeleted={handleMenuItemDeleted}
+                        onMenuItemsChanged={handleMenuItemsChanged}
                     />
                 </div>
             </div>

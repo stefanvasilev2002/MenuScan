@@ -1,97 +1,74 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Category, MenuItem, CreateMenuItemData, UpdateMenuItemData } from '@/types/menu';
+import { useState } from 'react';
+import { Category, MenuItem } from '@/types/menu';
 import ImageUpload from '@/components/image/ImageUpload';
+import { availabilityOf, availabilityPatch } from '@/lib/availability';
+import AvailabilityControl from './AvailabilityControl';
+import type { Currency } from '@/types/types';
+import { buildCategoryTree, flattenCategoryTree } from '@/lib/category-tree';
+import { fieldErrors, menuItemCreateSchema, type MenuItemCreateInput } from '@/lib/validation';
 
 interface MenuItemFormProps {
     item?: MenuItem;
+    currency?: Currency;
     categories: Category[];
     selectedCategoryId?: string | null;
-    onSubmit: (data: CreateMenuItemData | UpdateMenuItemData) => void;
+    onSubmit: (data: MenuItemCreateInput) => Promise<void>;
     onCancel: () => void;
     submitLabel: string;
 }
 
 const ALLERGEN_OPTIONS = [
-    'Gluten', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts', 
+    'Gluten', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts',
     'Peanuts', 'Soybeans', 'Wheat', 'Sesame', 'Sulfites'
 ];
 
-export default function MenuItemForm({ 
-    item, 
-    categories, 
+export default function MenuItemForm({
+    item,
+    currency = 'MKD',
+    categories,
     selectedCategoryId,
-    onSubmit, 
-    onCancel, 
-    submitLabel 
+    onSubmit,
+    onCancel,
+    submitLabel
 }: MenuItemFormProps) {
     const [formData, setFormData] = useState({
-        name: item?.name || '',
-        description: item?.description || '',
-        price: item?.price || '',
-        categoryId: item?.categoryId || selectedCategoryId || '',
-        imageUrl: item?.imageUrl || '',
-        imagePublicId: item?.imagePublicId || '',
+        name: item?.name ?? '',
+        description: item?.description ?? '',
+        price: item?.price !== undefined ? String(item.price) : '',
+        categoryId: item?.categoryId ?? selectedCategoryId ?? '',
+        imageUrl: item?.imageUrl ?? '',
+        imagePublicId: item?.imagePublicId ?? '',
         isAvailable: item?.isAvailable ?? true,
-        isVegetarian: item?.isVegetarian || false,
-        isVegan: item?.isVegan || false,
-        isSpicy: item?.isSpicy || false,
-        allergens: item?.allergens || [],
-        ingredients: item?.ingredients || [],
-        preparationTime: item?.preparationTime || ''
+        isHidden: item?.isHidden ?? false,
+        isVegetarian: item?.isVegetarian ?? false,
+        isVegan: item?.isVegan ?? false,
+        isSpicy: item?.isSpicy ?? false,
+        allergens: item?.allergens ?? [],
+        ingredients: item?.ingredients ?? [],
+        preparationTime: item?.preparationTime ? String(item.preparationTime) : ''
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = 'Item name is required';
-        }
-
-        if (formData.name.length > 100) {
-            newErrors.name = 'Item name must be less than 100 characters';
-        }
-
-        if (!formData.price || parseFloat(formData.price) <= 0) {
-            newErrors.price = 'Valid price is required';
-        }
-
-        if (!formData.categoryId) {
-            newErrors.categoryId = 'Category is required';
-        }
-
-        if (formData.description && formData.description.length > 500) {
-            newErrors.description = 'Description must be less than 500 characters';
-        }
-
-        if (formData.preparationTime && (parseInt(formData.preparationTime) < 1 || parseInt(formData.preparationTime) > 480)) {
-            newErrors.preparationTime = 'Preparation time must be between 1 and 480 minutes';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
+
+        const parsed = menuItemCreateSchema.safeParse({
+            ...formData,
+            price: formData.price === '' ? undefined : formData.price,
+            preparationTime: formData.preparationTime === '' ? null : formData.preparationTime,
+        });
+        if (!parsed.success) {
+            setErrors(fieldErrors(parsed.error));
             return;
         }
 
+        setErrors({});
         setIsSubmitting(true);
         try {
-            const submitData = {
-                ...formData,
-                price: parseFloat(formData.price),
-                preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined
-            };
-            await onSubmit(submitData);
-        } catch (error) {
-            console.error('Error submitting form:', error);
+            await onSubmit(parsed.data);
         } finally {
             setIsSubmitting(false);
         }
@@ -178,10 +155,9 @@ export default function MenuItemForm({
 
                     <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                            Price *
+                            Price ({currency}) *
                         </label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-500">$</span>
                             <input
                                 type="number"
                                 id="price"
@@ -189,7 +165,7 @@ export default function MenuItemForm({
                                 onChange={(e) => handleInputChange('price', e.target.value)}
                                 step="0.01"
                                 min="0"
-                                className={`w-full pl-8 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                     errors.price ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="0.00"
@@ -213,9 +189,9 @@ export default function MenuItemForm({
                             }`}
                         >
                             <option value="">Select a category</option>
-                            {categories.map((category) => (
+                            {flattenCategoryTree(buildCategoryTree(categories)).map(({ category, depth }) => (
                                 <option key={category._id} value={category._id}>
-                                    {category.name}
+                                    {`${'\u00A0\u00A0'.repeat(depth)}${category.name}`}
                                 </option>
                             ))}
                         </select>
@@ -254,9 +230,13 @@ export default function MenuItemForm({
                         </label>
                         <ImageUpload
                             currentImageUrl={formData.imageUrl}
+                            currentImagePublicId={formData.imagePublicId}
                             onImageUpload={handleImageUpload}
-                            folder="menu-items"
+                            onError={(message) => setErrors(prev => ({ ...prev, imageUrl: message }))}
                         />
+                        {errors.imageUrl && (
+                            <p className="mt-1 text-sm text-red-600">{errors.imageUrl}</p>
+                        )}
                     </div>
 
                     {/* Dietary Options */}
@@ -295,17 +275,16 @@ export default function MenuItemForm({
                         </div>
                     </div>
 
-                    {/* Availability */}
-                    <div>
-                        <label className="flex items-center">
-                            <input
-                                type="checkbox"
-                                checked={formData.isAvailable}
-                                onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Available for ordering</span>
-                        </label>
+                    <div className="space-y-2">
+                        <span className="block text-sm font-medium text-gray-700">Availability</span>
+                        <AvailabilityControl
+                            label="Availability"
+                            value={availabilityOf(formData)}
+                            onChange={(status) => setFormData(prev => ({ ...prev, ...availabilityPatch(status) }))}
+                        />
+                        <p className="text-xs text-gray-500">
+                            Sold out items stay on the menu with a badge. Hidden items are not shown to guests.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -341,7 +320,7 @@ export default function MenuItemForm({
                             type="text"
                             placeholder="Add an ingredient..."
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
                                     handleIngredientAdd(e.currentTarget.value);

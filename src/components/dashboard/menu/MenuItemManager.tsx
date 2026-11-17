@@ -1,131 +1,109 @@
 'use client';
 
 import { useState } from 'react';
-import { Category, MenuItem, CreateMenuItemData, UpdateMenuItemData } from '@/types/menu';
+import { Category, MenuItem } from '@/types/menu';
+import type { Currency } from '@/types/types';
+import { apiRequest, errorMessage } from '@/lib/client-api';
+import type { MenuItemCreateInput } from '@/lib/validation';
+import { availabilityPatch, type AvailabilityStatus } from '@/lib/availability';
+import { moveId, type MoveDirection } from '@/lib/reorder';
 import MenuItemForm from './MenuItemForm';
 import MenuItemCard from './MenuItemCard';
 
 interface MenuItemManagerProps {
     restaurantSlug: string;
+    currency: Currency;
     categories: Category[];
     menuItems: MenuItem[];
     selectedCategory: string | null;
     onMenuItemCreated: (item: MenuItem) => void;
     onMenuItemUpdated: (item: MenuItem) => void;
     onMenuItemDeleted: (itemId: string) => void;
+    onMenuItemsChanged: (items: MenuItem[]) => void;
 }
 
 export default function MenuItemManager({
     restaurantSlug,
+    currency,
     categories,
     menuItems,
     selectedCategory,
     onMenuItemCreated,
     onMenuItemUpdated,
-    onMenuItemDeleted
+    onMenuItemDeleted,
+    onMenuItemsChanged
 }: MenuItemManagerProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const baseUrl = `/api/restaurant/${restaurantSlug}/menu-items`;
 
-    const handleCreateMenuItem = async (data: CreateMenuItemData) => {
+    const run = async (action: () => Promise<void>) => {
+        setError(null);
         try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/menu-items`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create menu item');
-            }
-
-            const newItem = await response.json();
-            onMenuItemCreated(newItem);
-            setIsCreating(false);
-        } catch (error) {
-            console.error('Error creating menu item:', error);
-            alert('Failed to create menu item. Please try again.');
+            await action();
+        } catch (err) {
+            setError(errorMessage(err));
         }
     };
 
-    const handleUpdateMenuItem = async (itemId: string, data: UpdateMenuItemData) => {
-        try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/menu-items/${itemId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
+    const handleCreateMenuItem = (data: MenuItemCreateInput) => run(async () => {
+        const newItem = await apiRequest<MenuItem>(baseUrl, { method: 'POST', body: JSON.stringify(data) });
+        onMenuItemCreated(newItem);
+        setIsCreating(false);
+    });
 
-            if (!response.ok) {
-                throw new Error('Failed to update menu item');
-            }
+    const handleUpdateMenuItem = (itemId: string, data: Partial<MenuItemCreateInput>) => run(async () => {
+        const updatedItem = await apiRequest<MenuItem>(`${baseUrl}/${itemId}`, { method: 'PUT', body: JSON.stringify(data) });
+        onMenuItemUpdated(updatedItem);
+        setEditingItem(null);
+    });
 
-            const updatedItem = await response.json();
-            onMenuItemUpdated(updatedItem);
-            setEditingItem(null);
-        } catch (error) {
-            console.error('Error updating menu item:', error);
-            alert('Failed to update menu item. Please try again.');
-        }
-    };
+    const handleDuplicateMenuItem = (itemId: string) => run(async () => {
+        const { items } = await apiRequest<{ item: MenuItem; items: MenuItem[] }>(`${baseUrl}/${itemId}/duplicate`, {
+            method: 'POST',
+        });
+        onMenuItemsChanged(items);
+    });
 
-    const handleDeleteMenuItem = async (itemId: string) => {
+    const handleDeleteMenuItem = (itemId: string) => {
         if (!confirm('Are you sure you want to delete this menu item?')) {
             return;
         }
-
-        try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/menu-items/${itemId}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete menu item');
-            }
-
+        return run(async () => {
+            await apiRequest(`${baseUrl}/${itemId}`, { method: 'DELETE' });
             onMenuItemDeleted(itemId);
-        } catch (error) {
-            console.error('Error deleting menu item:', error);
-            alert('Failed to delete menu item. Please try again.');
-        }
+        });
     };
 
-    const handleToggleAvailability = async (itemId: string, isAvailable: boolean) => {
-        try {
-            const response = await fetch(`/api/restaurant/${restaurantSlug}/menu-items/${itemId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ isAvailable }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update menu item');
-            }
-
-            const updatedItem = await response.json();
-            onMenuItemUpdated(updatedItem);
-        } catch (error) {
-            console.error('Error updating menu item:', error);
-            alert('Failed to update menu item. Please try again.');
-        }
-    };
+    const handleAvailabilityChange = (itemId: string, status: AvailabilityStatus) => run(async () => {
+        const updatedItem = await apiRequest<MenuItem>(`${baseUrl}/${itemId}`, {
+            method: 'PUT',
+            body: JSON.stringify(availabilityPatch(status)),
+        });
+        onMenuItemUpdated(updatedItem);
+    });
 
     const selectedCategoryName = selectedCategory 
         ? categories.find(cat => cat._id === selectedCategory)?.name 
         : null;
 
     const sortedMenuItems = [...menuItems].sort((a, b) => a.order - b.order);
-    
-    // Debug logging
-    console.log('MenuItemManager - menuItems:', menuItems);
-    console.log('MenuItemManager - sortedMenuItems:', sortedMenuItems);
-    console.log('MenuItemManager - selectedCategory:', selectedCategory);
+    const sortedIds = sortedMenuItems.map((item) => item._id);
+
+    const handleMoveItem = (itemId: string, direction: MoveDirection) => {
+        const orderedIds = moveId(sortedIds, itemId, direction);
+        if (!selectedCategory || !orderedIds) {
+            return;
+        }
+        return run(async () => {
+            const updated = await apiRequest<MenuItem[]>(`${baseUrl}/reorder`, {
+                method: 'PUT',
+                body: JSON.stringify({ categoryId: selectedCategory, orderedIds }),
+            });
+            onMenuItemsChanged(updated);
+        });
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -164,10 +142,18 @@ export default function MenuItemManager({
 
             {/* Content */}
             <div className="p-6">
+                {error && (
+                    <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
                 {isCreating && (
                     <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg">
                         <MenuItemForm
+                            currency={currency}
                             categories={categories}
+                            selectedCategoryId={selectedCategory}
                             onSubmit={handleCreateMenuItem}
                             onCancel={() => setIsCreating(false)}
                             submitLabel="Create Menu Item"
@@ -178,7 +164,9 @@ export default function MenuItemManager({
                 {editingItem && (
                     <div className="mb-6 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <MenuItemForm
-                            menuItem={editingItem}
+                            key={editingItem._id}
+                            item={editingItem}
+                            currency={currency}
                             categories={categories}
                             onSubmit={(data) => handleUpdateMenuItem(editingItem._id, data)}
                             onCancel={() => setEditingItem(null)}
@@ -225,10 +213,15 @@ export default function MenuItemManager({
                                 <MenuItemCard
                                     key={item._id}
                                     item={item}
+                                    currency={currency}
                                     category={categories.find(cat => cat._id === item.categoryId)}
                                     onEdit={() => setEditingItem(item)}
                                     onDelete={() => handleDeleteMenuItem(item._id)}
-                                    onToggleAvailability={() => handleToggleAvailability(item._id, !item.isAvailable)}
+                                    onDuplicate={() => handleDuplicateMenuItem(item._id)}
+                                    onAvailabilityChange={(status) => handleAvailabilityChange(item._id, status)}
+                                    canMoveUp={sortedIds[0] !== item._id}
+                                    canMoveDown={sortedIds.at(-1) !== item._id}
+                                    onMove={selectedCategory ? (direction) => handleMoveItem(item._id, direction) : undefined}
                                 />
                             ))}
                         </div>

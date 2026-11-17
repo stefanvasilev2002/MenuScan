@@ -9,9 +9,9 @@ export interface IOrderItem {
     modifications?: string[];
 }
 
-export interface IOrder extends mongoose.Document {
+export interface IOrder {
     orderNumber: string;
-    restaurantId: string;
+    restaurantId: mongoose.Types.ObjectId;
     customerName?: string;
     customerPhone?: string;
     customerEmail?: string;

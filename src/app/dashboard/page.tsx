@@ -1,27 +1,17 @@
-import { cookies } from 'next/headers';
-import { getCurrentUser } from '@/lib/auth';
-import { Restaurant } from '@/models/Restaurant';
-import { connectToDatabase } from '@/lib/db';
-import { redirect } from 'next/navigation';
 import RestaurantsList from '@/components/dashboard/RestaurantsList';
+import { connectToDatabase } from '@/lib/db';
+import { requirePageUser } from '@/lib/page-auth';
+import { toRestaurantData, toUserData } from '@/lib/serializers';
+import { getOwnerCounts } from '@/lib/stats';
+import { Restaurant } from '@/models/Restaurant';
 
 export default async function DashboardPage() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-    
-    if (!token) {
-        redirect('/login');
-    }
-    
-    const user = await getCurrentUser(token);
-    if (!user) {
-        redirect('/login');
-    }
-    
+    const user = await requirePageUser();
     await connectToDatabase();
-    
-    // Get user's restaurants
-    const restaurants = await Restaurant.find({ userId: user._id }).sort({ createdAt: -1 });
-    
-    return <RestaurantsList restaurants={restaurants} user={user} />;
+    const [restaurants, counts] = await Promise.all([
+        Restaurant.find({ userId: user._id }).sort({ createdAt: -1 }).lean(),
+        getOwnerCounts(String(user._id)),
+    ]);
+
+    return <RestaurantsList restaurants={restaurants.map(toRestaurantData)} user={toUserData(user)} counts={counts} />;
 }

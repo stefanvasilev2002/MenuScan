@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
     QrCode, 
     Smartphone, 
@@ -8,9 +7,7 @@ import {
     CheckCircle, 
     Star,
     ArrowRight,
-    Menu as MenuIcon,
     Users,
-    Clock,
     Globe
 } from 'lucide-react';
 

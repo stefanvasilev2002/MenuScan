@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-    Menu, 
     QrCode, 
     Smartphone, 
     BarChart3, 
@@ -78,7 +77,7 @@ const translations = {
 
 const LoginPage = () => {
     const router = useRouter();
-    const [lang, setLang] = useState('en');
+    const [lang, setLang] = useState<'en' | 'mk'>('en');
     const t = translations[lang];
 
     const [formData, setFormData] = useState({
@@ -120,7 +119,7 @@ const LoginPage = () => {
         return !newErrors.email && !newErrors.password;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
 
@@ -139,7 +138,7 @@ const LoginPage = () => {
             if (!res.ok) throw new Error(data.error || 'Failed to login');
             router.push('/dashboard');
         } catch (error) {
-            setGeneralError(error.message);
+            setGeneralError(error instanceof Error ? error.message : 'Failed to login');
         } finally {
             setIsLoading(false);
         }

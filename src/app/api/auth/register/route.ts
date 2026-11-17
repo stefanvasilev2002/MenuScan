@@ -1,61 +1,31 @@
 import { NextResponse } from 'next/server';
+import { conflict, parseJson, route } from '@/lib/api';
+import { AUTH_COOKIE, authCookieOptions, signToken } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
+import { registerSchema } from '@/lib/validation';
 import { User } from '@/models/User';
-import jwt from 'jsonwebtoken';
-import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+export const POST = route(async (request) => {
+    const { email, password, businessName } = await parseJson(request, registerSchema);
 
-export async function POST(request: Request) {
-    try {
-        await connectToDatabase();
-        const body = await request.json();
-        const { email, password, businessName } = body;
+    await connectToDatabase();
+    if (await User.exists({ email })) {
+        throw conflict('Email already registered');
+    }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return NextResponse.json(
-                { error: 'Email already registered' },
-                { status: 400 }
-            );
-        }
+    const user = await User.create({ email, password, businessName });
 
-        // Create new user
-        const user = new User({
-            email,
-            password,
-            businessName
-        });
-
-        await user.save();
-
-        const token = jwt.sign(
-            { userId: user._id, email: user.email },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-         cookies().set('auth_token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60
-        });
-
-        return NextResponse.json({
-            success: true,
+    const token = await signToken(String(user._id));
+    const response = NextResponse.json(
+        {
             user: {
                 id: user._id,
                 email: user.email,
-                businessName: user.businessName
-            }
-        });
-    } catch (error) {
-        console.error('Registration error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+                businessName: user.businessName,
+            },
+        },
+        { status: 201 },
+    );
+    response.cookies.set(AUTH_COOKIE, token, authCookieOptions);
+    return response;
+});

@@ -1,9 +1,10 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, type Model, type Types } from 'mongoose';
+import { uniqueSlug } from '@/lib/slug';
 
-export interface IRestaurant extends mongoose.Document {
+export interface IRestaurant {
     name: string;
     slug: string;
-    userId: string;
+    userId: Types.ObjectId;
     description?: string;
     address?: string;
     phone?: string;
@@ -23,7 +24,11 @@ export interface IRestaurant extends mongoose.Document {
     updatedAt: Date;
 }
 
-const RestaurantSchema = new Schema<IRestaurant>({
+interface RestaurantModel extends Model<IRestaurant> {
+    generateUniqueSlug(name: string): Promise<string>;
+}
+
+const RestaurantSchema = new Schema<IRestaurant, RestaurantModel>({
     name: {
         type: String,
         required: [true, 'Restaurant name is required'],
@@ -53,7 +58,7 @@ const RestaurantSchema = new Schema<IRestaurant>({
     },
     phone: {
         type: String,
-        match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number']
+        match: [/^\+?\d{6,16}$/, 'Please enter a valid phone number']
     },
     email: {
         type: String,
@@ -102,47 +107,12 @@ const RestaurantSchema = new Schema<IRestaurant>({
     timestamps: true
 });
 
-// Create index on userId for faster queries
 RestaurantSchema.index({ userId: 1 });
 
-// Pre-save middleware to ensure slug uniqueness
-RestaurantSchema.pre('save', async function(next) {
-    if (this.isModified('slug')) {
-        const existingRestaurant = await mongoose.model('Restaurant').findOne({
-            slug: this.slug,
-            _id: { $ne: this._id }
-        });
-        
-        if (existingRestaurant) {
-            const error = new Error('Restaurant with this slug already exists');
-            return next(error);
-        }
-    }
-    next();
-});
-
-// Static method to generate unique slug
-RestaurantSchema.statics.generateUniqueSlug = async function(name: string, userId: string): Promise<string> {
-    let baseSlug = name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
-    
-    let slug = baseSlug;
-    let counter = 1;
-    
-    while (true) {
-        const existingRestaurant = await this.findOne({ slug, userId });
-        if (!existingRestaurant) {
-            break;
-        }
-        slug = `${baseSlug}-${counter}`;
-        counter++;
-    }
-    
-    return slug;
+RestaurantSchema.statics.generateUniqueSlug = function (name: string): Promise<string> {
+    return uniqueSlug(name, async (slug) => (await this.exists({ slug })) !== null);
 };
 
-export const Restaurant = mongoose.models.Restaurant || mongoose.model<IRestaurant>('Restaurant', RestaurantSchema); 
+export const Restaurant =
+    (mongoose.models.Restaurant as RestaurantModel | undefined) ||
+    mongoose.model<IRestaurant, RestaurantModel>('Restaurant', RestaurantSchema);

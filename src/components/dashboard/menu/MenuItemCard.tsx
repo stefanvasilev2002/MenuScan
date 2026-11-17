@@ -1,46 +1,55 @@
 'use client';
 
+import Image from 'next/image';
+import { Copy } from 'lucide-react';
 import { Category, MenuItem } from '@/types/menu';
+import { availabilityOf, type AvailabilityStatus } from '@/lib/availability';
+import AvailabilityControl from './AvailabilityControl';
+import MoveButtons from './MoveButtons';
+import type { MoveDirection } from '@/lib/reorder';
+import { formatPrice } from '@/lib/currency';
+import type { Currency } from '@/types/types';
 
 interface MenuItemCardProps {
     item: MenuItem;
+    currency?: Currency;
     category?: Category;
     onEdit: () => void;
     onDelete: () => void;
-    onToggleAvailability: () => void;
+    onDuplicate?: () => void;
+    onAvailabilityChange: (status: AvailabilityStatus) => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
+    onMove?: (direction: MoveDirection) => void;
 }
 
 export default function MenuItemCard({ 
     item, 
+    currency = 'MKD',
     category, 
     onEdit, 
     onDelete, 
-    onToggleAvailability 
+    onDuplicate,
+    onAvailabilityChange,
+    canMoveUp = false,
+    canMoveDown = false,
+    onMove
 }: MenuItemCardProps) {
-    // Add null check for item
-    if (!item) {
-        return (
-            <div className="bg-white rounded-lg border shadow-sm p-4">
-                <div className="animate-pulse">
-                    <div className="h-48 bg-gray-200 rounded-t-lg mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-            </div>
-        );
-    }
+    const status = availabilityOf(item);
 
     return (
         <div className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-all ${
-            !item.isAvailable ? 'opacity-60' : ''
+            status !== 'available' ? 'opacity-70' : ''
         }`}>
             {/* Image */}
             <div className="relative h-48 bg-gray-200 rounded-t-lg overflow-hidden">
                 {item.imageUrl ? (
-                    <img
+                    <Image
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                        className="object-cover"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -50,37 +59,19 @@ export default function MenuItemCard({
                     </div>
                 )}
                 
-                {/* Availability Badge */}
-                {!item.isAvailable && (
-                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                        Out of Stock
+                {status !== 'available' && (
+                    <div className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded-full ${
+                        status === 'hidden' ? 'bg-gray-700' : 'bg-amber-500'
+                    }`}>
+                        {status === 'hidden' ? 'Hidden from menu' : 'Sold out'}
                     </div>
                 )}
 
                 {/* Actions */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
-                    <button
-                        onClick={onToggleAvailability}
-                        className={`p-1.5 rounded-full transition-colors ${
-                            item.isAvailable 
-                                ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' 
-                                : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                        }`}
-                        title={item.isAvailable ? 'Mark as unavailable' : 'Mark as available'}
-                    >
-                        {item.isAvailable ? (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                            </svg>
-                        ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        )}
-                    </button>
-                    
+                <div className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center space-x-1 bg-white/80 rounded-full">
                     <button
                         onClick={onEdit}
+                        aria-label={`Edit ${item.name}`}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                         title="Edit item"
                     >
@@ -89,8 +80,20 @@ export default function MenuItemCard({
                         </svg>
                     </button>
                     
+                    {onDuplicate && (
+                        <button
+                            onClick={onDuplicate}
+                            aria-label={`Duplicate ${item.name}`}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            title="Duplicate item"
+                        >
+                            <Copy className="w-4 h-4" />
+                        </button>
+                    )}
+
                     <button
                         onClick={onDelete}
+                        aria-label={`Delete ${item.name}`}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                         title="Delete item"
                     >
@@ -99,6 +102,19 @@ export default function MenuItemCard({
                         </svg>
                     </button>
                 </div>
+            </div>
+
+            <div className="px-4 pt-3 flex items-center justify-between gap-2">
+                <AvailabilityControl
+                    value={status}
+                    onChange={onAvailabilityChange}
+                    label={`Availability of ${item.name}`}
+                />
+                {onMove && (
+                    <div className="flex">
+                        <MoveButtons name={item.name} canMoveUp={canMoveUp} canMoveDown={canMoveDown} onMove={onMove} />
+                    </div>
+                )}
             </div>
 
             {/* Content */}
@@ -121,7 +137,7 @@ export default function MenuItemCard({
                     </div>
                     <div className="text-right ml-2">
                         <p className="text-lg font-bold text-gray-900">
-                            ${item.price.toFixed(2)}
+                            {formatPrice(item.price, currency)}
                         </p>
                     </div>
                 </div>

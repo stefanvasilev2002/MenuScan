@@ -1,23 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Category, CreateCategoryData, UpdateCategoryData } from '@/types/menu';
+import { useState } from 'react';
+import { EmojiPicker } from '@/components/EmojiPicker';
+import { Category } from '@/types/menu';
+import { categoryCreateSchema, fieldErrors, type CategoryCreateInput } from '@/lib/validation';
+import {
+    buildCategoryTree,
+    flattenCategoryTree,
+    getDescendantIds,
+    getDepth,
+    MAX_CATEGORY_DEPTH,
+} from '@/lib/category-tree';
 
 interface CategoryFormProps {
     category?: Category;
-    onSubmit: (data: CreateCategoryData | UpdateCategoryData) => void;
+    categories: Category[];
+    onSubmit: (data: CategoryCreateInput) => void;
     onCancel: () => void;
     submitLabel: string;
 }
 
-const ICON_OPTIONS = [
-    '🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥗', '🥙', '🥪',
-    '🍜', '🍝', '🍛', '🍚', '🍙', '🍘', '🍱', '🥘', '🍲', '🥣',
-    '🥗', '🥙', '🥪', '🌮', '🌯', '🥗', '🥙', '🥪', '🌮', '🌯',
-    '🍣', '🍤', '🍥', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🧁',
-    '🥧', '🍰', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕',
-    '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍷', '🍸', '🍹', '🍾',
-    '🥂', '🥃', '🍻', '🍽️', '🍴', '🥄', '🔪', '🏺', '🌶️', '🧂'
+const QUICK_ICONS = [
+    '🍽️', '🍕', '🍔', '🥗', '🍝', '🍜', '🍣', '🥩', '🐟', '🍰',
+    '🍨', '☕', '🍵', '🥤', '🍺', '🍷', '🍸', '🥂', '🌶️', '🥐'
 ];
 
 const COLOR_OPTIONS = [
@@ -33,46 +38,34 @@ const COLOR_OPTIONS = [
     { name: 'Teal', value: '#14B8A6' }
 ];
 
-export default function CategoryForm({ category, onSubmit, onCancel, submitLabel }: CategoryFormProps) {
+export default function CategoryForm({ category, categories, onSubmit, onCancel, submitLabel }: CategoryFormProps) {
     const [formData, setFormData] = useState({
         name: category?.name || '',
         description: category?.description || '',
         icon: category?.icon || '🍽️',
         color: category?.color || '#3B82F6',
-        isVisible: category?.isVisible ?? true
+        isVisible: category?.isVisible ?? true,
+        parentId: category?.parentId ?? null
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = 'Category name is required';
-        }
-
-        if (formData.name.length > 50) {
-            newErrors.name = 'Category name must be less than 50 characters';
-        }
-
-        if (formData.description && formData.description.length > 200) {
-            newErrors.description = 'Description must be less than 200 characters';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
+        const parsed = categoryCreateSchema.safeParse(formData);
+        if (!parsed.success) {
+            setErrors(fieldErrors(parsed.error));
             return;
         }
-
-        onSubmit(formData);
+        setErrors({});
+        onSubmit(parsed.data);
     };
 
-    const handleInputChange = (field: string, value: string | boolean) => {
+    const excluded = new Set(category ? [category._id, ...getDescendantIds(categories, category._id)] : []);
+    const parentOptions = flattenCategoryTree(buildCategoryTree(categories)).filter(
+        ({ category: option }) => !excluded.has(option._id) && getDepth(categories, option._id) < MAX_CATEGORY_DEPTH
+    );
+
+    const handleInputChange = (field: string, value: string | boolean | null) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         
         // Clear error when user starts typing
@@ -103,6 +96,30 @@ export default function CategoryForm({ category, onSubmit, onCancel, submitLabel
             </div>
 
             <div>
+                <label htmlFor="parentId" className="block text-sm font-medium text-gray-700 mb-1">
+                    Parent category
+                </label>
+                <select
+                    id="parentId"
+                    value={formData.parentId ?? ''}
+                    onChange={(e) => handleInputChange('parentId', e.target.value || null)}
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.parentId ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                >
+                    <option value="">None (top level)</option>
+                    {parentOptions.map(({ category: option, depth }) => (
+                        <option key={option._id} value={option._id}>
+                            {`${'\u00A0\u00A0'.repeat(depth)}${option.icon ?? ''} ${option.name}`}
+                        </option>
+                    ))}
+                </select>
+                {errors.parentId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.parentId}</p>
+                )}
+            </div>
+
+            <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                     Description
                 </label>
@@ -125,11 +142,13 @@ export default function CategoryForm({ category, onSubmit, onCancel, submitLabel
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                     Icon
                 </label>
-                <div className="grid grid-cols-10 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-                    {ICON_OPTIONS.map((icon, index) => (
+                <div className="grid grid-cols-10 gap-2 border border-gray-300 rounded-md p-2 mb-2">
+                    {QUICK_ICONS.map((icon) => (
                         <button
-                            key={index}
+                            key={icon}
                             type="button"
+                            aria-label={`Use ${icon} as icon`}
+                            aria-pressed={formData.icon === icon}
                             onClick={() => handleInputChange('icon', icon)}
                             className={`w-8 h-8 text-lg flex items-center justify-center rounded hover:bg-gray-100 transition-colors ${
                                 formData.icon === icon ? 'bg-blue-100 border-2 border-blue-500' : ''
@@ -139,6 +158,13 @@ export default function CategoryForm({ category, onSubmit, onCancel, submitLabel
                         </button>
                     ))}
                 </div>
+                <EmojiPicker
+                    currentEmoji={formData.icon}
+                    onEmojiSelect={(emoji) => handleInputChange('icon', emoji)}
+                />
+                {errors.icon && (
+                    <p className="mt-1 text-sm text-red-600">{errors.icon}</p>
+                )}
             </div>
 
             <div>

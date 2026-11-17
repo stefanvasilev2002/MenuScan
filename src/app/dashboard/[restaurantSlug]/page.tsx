@@ -1,12 +1,15 @@
-import { Restaurant } from '@/models/Restaurant';
 import RestaurantDashboardOverview from '@/components/dashboard/RestaurantDashboardOverview';
+import { requireOwnedRestaurantPage } from '@/lib/page-auth';
+import { getMenuCounts } from '@/lib/stats';
 
-interface RestaurantDashboardPageProps {
-    params: {
-        restaurantSlug: string;
-    };
+interface Props {
+    params: Promise<{ restaurantSlug: string }>;
 }
 
-export default function RestaurantDashboardPage({ params }: RestaurantDashboardPageProps) {
-    return <RestaurantDashboardOverview restaurantSlug={params.restaurantSlug} />;
-} 
+export default async function RestaurantDashboardPage({ params }: Props) {
+    const { restaurantSlug } = await params;
+    const { restaurant } = await requireOwnedRestaurantPage(restaurantSlug);
+    const counts = await getMenuCounts(restaurant._id);
+
+    return <RestaurantDashboardOverview restaurantSlug={restaurant.slug} restaurantName={restaurant.name} counts={counts} />;
+}
