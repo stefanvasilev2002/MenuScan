@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { EmojiPicker } from '@/components/EmojiPicker';
 import { Category } from '@/types/menu';
 import { categoryCreateSchema, fieldErrors, type CategoryCreateInput } from '@/lib/validation';
 import {
@@ -19,14 +20,9 @@ interface CategoryFormProps {
     submitLabel: string;
 }
 
-const ICON_OPTIONS = [
-    '🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥗', '🥙', '🥪',
-    '🍜', '🍝', '🍛', '🍚', '🍙', '🍘', '🍱', '🥘', '🍲', '🥣',
-    '🥗', '🥙', '🥪', '🌮', '🌯', '🥗', '🥙', '🥪', '🌮', '🌯',
-    '🍣', '🍤', '🍥', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🧁',
-    '🥧', '🍰', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕',
-    '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍷', '🍸', '🍹', '🍾',
-    '🥂', '🥃', '🍻', '🍽️', '🍴', '🥄', '🔪', '🏺', '🌶️', '🧂'
+const QUICK_ICONS = [
+    '🍽️', '🍕', '🍔', '🥗', '🍝', '🍜', '🍣', '🥩', '🐟', '🍰',
+    '🍨', '☕', '🍵', '🥤', '🍺', '🍷', '🍸', '🥂', '🌶️', '🥐'
 ];
 
 const COLOR_OPTIONS = [
@@ -146,11 +142,13 @@ export default function CategoryForm({ category, categories, onSubmit, onCancel,
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                     Icon
                 </label>
-                <div className="grid grid-cols-10 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-                    {ICON_OPTIONS.map((icon, index) => (
+                <div className="grid grid-cols-10 gap-2 border border-gray-300 rounded-md p-2 mb-2">
+                    {QUICK_ICONS.map((icon) => (
                         <button
-                            key={index}
+                            key={icon}
                             type="button"
+                            aria-label={`Use ${icon} as icon`}
+                            aria-pressed={formData.icon === icon}
                             onClick={() => handleInputChange('icon', icon)}
                             className={`w-8 h-8 text-lg flex items-center justify-center rounded hover:bg-gray-100 transition-colors ${
                                 formData.icon === icon ? 'bg-blue-100 border-2 border-blue-500' : ''
@@ -160,6 +158,13 @@ export default function CategoryForm({ category, categories, onSubmit, onCancel,
                         </button>
                     ))}
                 </div>
+                <EmojiPicker
+                    currentEmoji={formData.icon}
+                    onEmojiSelect={(emoji) => handleInputChange('icon', emoji)}
+                />
+                {errors.icon && (
+                    <p className="mt-1 text-sm text-red-600">{errors.icon}</p>
+                )}
             </div>
 
             <div>
