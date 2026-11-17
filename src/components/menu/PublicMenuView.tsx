@@ -6,6 +6,7 @@ import { buildCategoryTree, type CategoryNode } from '@/lib/category-tree';
 import { EMPTY_FILTERS, filterMenuItems, hasActiveFilters, type MenuFilters } from '@/lib/menu-filter';
 import type { PublicCategory, PublicMenu, PublicMenuItem } from '@/lib/public-menu';
 import type { Currency } from '@/types/types';
+import CategoryJumpBar from './CategoryJumpBar';
 import MenuFilterBar from './MenuFilterBar';
 import PublicMenuItemCard from './PublicMenuItemCard';
 import { MENU_TEXT, type MenuLang } from './menu-text';
@@ -43,7 +44,11 @@ function CategorySection({
     const Heading = level === 0 ? 'h2' : 'h3';
 
     return (
-        <section id={`category-${node._id}`} aria-labelledby={`heading-${node._id}`} className={`space-y-6 ${level > 0 ? 'sm:ml-6' : ''}`}>
+        <section
+            id={`category-${node._id}`}
+            aria-labelledby={`heading-${node._id}`}
+            className={`space-y-6 scroll-mt-20 ${level > 0 ? 'sm:ml-6' : ''}`}
+        >
             <div className="flex items-center gap-4">
                 <Heading
                     id={`heading-${node._id}`}
@@ -98,6 +103,7 @@ export default function PublicMenuView({ menu }: Props) {
         }
         return map;
     }, [visibleItems]);
+    const jumpSections = tree.filter((node) => countItems(node, itemsByCategory) > 0);
     const priceCeiling = useMemo(() => Math.ceil(Math.max(0, ...menu.items.map((i) => i.price))), [menu.items]);
 
     return (
@@ -135,6 +141,7 @@ export default function PublicMenuView({ menu }: Props) {
                         />
                     </div>
                 )}
+                <CategoryJumpBar sections={jumpSections} label={t.jumpTo} />
                 {menu.items.length === 0 ? (
                     <p className="text-center text-gray-500 text-lg py-16">{t.emptyMenu}</p>
                 ) : visibleItems.length === 0 && hasActiveFilters(filters) ? (

@@ -106,6 +106,22 @@ describe('PublicMenuView', () => {
         expect(screen.queryByRole('article', { name: 'Turkish coffee' })).not.toBeInTheDocument();
     });
 
+    it('shows a jump bar linking to each top-level section with items', () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+        const nav = screen.getByRole('navigation', { name: 'Menu sections' });
+        const links = within(nav).getAllByRole('link');
+
+        expect(links.map((l) => l.textContent)).toEqual(['🍲Food', '🥤Drinks']);
+        expect(links[1]).toHaveAttribute('href', '#category-drinks');
+        expect(document.getElementById('category-drinks')).toBeInTheDocument();
+    });
+
+    it('updates the jump bar when filters remove a section', async () => {
+        render(<PublicMenuView menu={sampleMenu} />);
+        await userEvent.type(screen.getByRole('searchbox'), 'coffee');
+        expect(screen.queryByRole('navigation', { name: 'Menu sections' })).not.toBeInTheDocument();
+    });
+
     it('switches labels to Macedonian', async () => {
         render(<PublicMenuView menu={sampleMenu} />);
         await userEvent.click(screen.getByRole('button', { name: /switch to macedonian/i }));
